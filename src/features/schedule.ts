@@ -170,3 +170,60 @@ export function useReorderCrew() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['crew'] }),
   });
 }
+
+const refreshShifts = (queryClient: ReturnType<typeof useQueryClient>) =>
+  queryClient.invalidateQueries({ queryKey: ['schedule', 'shifts'] });
+
+/** Copies one shift onto other days. Days the person is off are skipped. */
+export function useDuplicateShift() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, dates }: { id: string; dates: string[] }) => {
+      const { data, error } = await supabase.rpc('duplicate_shift', { p_shift_id: id, p_dates: dates });
+      if (error) throw error;
+      return data;
+    },
+    onSettled: () => refreshShifts(queryClient),
+  });
+}
+
+export function useCopyWeek() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ from, to }: { from: string; to: string }) => {
+      const { data, error } = await supabase.rpc('copy_week', { p_from: from, p_to: to });
+      if (error) throw error;
+      return data[0];
+    },
+    onSettled: () => refreshShifts(queryClient),
+  });
+}
+
+export function useUndoCopyWeek() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (batchId: string) => {
+      const { data, error } = await supabase.rpc('undo_copy_week', { p_batch_id: batchId });
+      if (error) throw error;
+      return data;
+    },
+    onSettled: () => refreshShifts(queryClient),
+  });
+}
+
+export function useMoveShift() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { shift: Shift; to: string; expectedDest: string[]; mode: 'merge' | 'replace' }) => {
+      const { error } = await supabase.rpc('move_shift', {
+        p_shift_id: args.shift.id,
+        p_expected_updated_at: args.shift.updated_at,
+        p_to: args.to,
+        p_expected_dest: args.expectedDest,
+        p_mode: args.mode,
+      });
+      if (error) throw error;
+    },
+    onSettled: () => refreshShifts(queryClient),
+  });
+}

@@ -179,15 +179,24 @@ export default function ScheduleScreen() {
       {body}
 
       {isAdmin && !reordering ? (
-        <Button
-          label="Add shift"
-          onPress={() =>
-            router.push({
-              pathname: '/shift',
-              params: { date: view === 'week' ? (days.includes(now) ? now : days[0]) : date },
-            })
-          }
-        />
+        <>
+          <Button
+            label="Add shift"
+            onPress={() =>
+              router.push({
+                pathname: '/shift',
+                params: { date: view === 'week' ? (days.includes(now) ? now : days[0]) : date },
+              })
+            }
+          />
+          {view === 'week' ? (
+            <Button
+              label="Copy this week"
+              variant="secondary"
+              onPress={() => router.push({ pathname: '/copy-week', params: { from: days[0] } })}
+            />
+          ) : null}
+        </>
       ) : null}
     </Screen>
   );

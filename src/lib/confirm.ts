@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { Alert, Platform } from 'react-native';
 
 /**
@@ -24,4 +25,10 @@ export function errorMessage(error: unknown): string {
     return message;
   }
   return 'Something went wrong. Try again.';
+}
+
+/** Back to the previous screen, or to the schedule when the page was opened directly. */
+export function goBack(fallback: '/' | '/more' = '/') {
+  if (router.canGoBack()) router.back();
+  else router.replace(fallback);
 }

@@ -19,7 +19,9 @@ export default function ScheduleLayout() {
       <Stack.Screen name="index" options={{ headerShown: false, title: 'Schedule' }} />
       {/* The database enforces the same rule; this only hides the editor. */}
       <Stack.Protected guard={isAdmin}>
-        <Stack.Screen name="shift" options={{ title: 'Shift', presentation: 'modal' }} />
+        <Stack.Screen name="shift" options={{ title: 'Shift' }} />
+        <Stack.Screen name="shift-copy" options={{ title: 'Copy to other days' }} />
+        <Stack.Screen name="copy-week" options={{ title: 'Copy week' }} />
       </Stack.Protected>
     </Stack>
   );

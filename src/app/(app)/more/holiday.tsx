@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { AppText, Button, Card, ErrorText, Field, Loading, Screen } from '@/components/ui';
 import { type Holiday, useDeleteHoliday, useSaveHoliday } from '@/features/schedule';
-import { confirmAction, errorMessage } from '@/lib/confirm';
+import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
 import { isDay, longDay, today } from '@/lib/dates';
 import { supabase } from '@/lib/supabase';
 
@@ -51,7 +51,7 @@ function HolidayForm({ existing, startDate }: { existing?: Holiday; startDate: s
     setError(null);
     try {
       await save.mutateAsync({ id: existing?.id, values: { name: name.trim(), holiday_date: date } });
-      router.back();
+      goBack('/more');
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -63,7 +63,7 @@ function HolidayForm({ existing, startDate }: { existing?: Holiday; startDate: s
     if (!ok) return;
     try {
       await remove.mutateAsync(existing.id);
-      router.back();
+      goBack('/more');
     } catch (e) {
       setError(errorMessage(e));
     }

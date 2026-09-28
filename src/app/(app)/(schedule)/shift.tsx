@@ -15,12 +15,20 @@ import {
   SectionTitle,
 } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
-import { type Shift, useDeleteShift, useSaveShift, useScheduleRange, useShift } from '@/features/schedule';
+import { DatePicker } from '@/components/date-picker';
+import {
+  type Shift,
+  useDeleteShift,
+  useMoveShift,
+  useSaveShift,
+  useScheduleRange,
+  useShift,
+} from '@/features/schedule';
 import { type Crew, useCrew } from '@/features/team';
 import { useTheme } from '@/hooks/use-theme';
-import { confirmAction, errorMessage } from '@/lib/confirm';
+import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
 import { addDays, isDay, longDay, today } from '@/lib/dates';
-import { parseTime, shiftConflicts, shortTime } from '@/lib/schedule';
+import { parseTime, shiftConflicts, shiftTimeLabel, shortTime } from '@/lib/schedule';
 
 export default function ShiftScreen() {
   const params = useLocalSearchParams<{ id?: string; crew?: string; date?: string }>();
@@ -63,6 +71,7 @@ function ShiftForm({
   const theme = useTheme();
   const save = useSaveShift();
   const remove = useDeleteShift();
+  const move = useMoveShift();
 
   const [crewId, setCrewId] = useState(existing?.crew_id ?? initialCrew ?? '');
   const [date, setDate] = useState(existing?.shift_date ?? initialDate);
@@ -71,6 +80,8 @@ function ShiftForm({
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [error, setError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  const [askMove, setAskMove] = useState(false);
 
   const validDate = isDay(date);
   const around = useScheduleRange(validDate ? date : initialDate, validDate ? date : initialDate);
@@ -82,32 +93,57 @@ function ShiftForm({
           around.holidays.data,
         )
       : [];
-  const busy = save.isPending || remove.isPending;
+  const busy = save.isPending || remove.isPending || move.isPending;
 
-  async function onSave() {
+  // Changing the day of an existing shift for the same person is a move: it
+  // can't land on their time off, and their other shifts that day are merged
+  // or replaced (PRD §5).
+  const moving = !!existing && validDate && date !== existing.shift_date && crewId === existing.crew_id;
+  const destShifts = moving
+    ? (around.shifts.data ?? []).filter((s) => s.crew_id === crewId && s.shift_date === date && s.id !== existing!.id)
+    : [];
+  const movingOntoTimeOff = moving && conflicts.some((c) => c.kind === 'time-off');
+
+  function validate() {
     const next: Record<string, string | null> = {};
     const startTime = parseTime(start);
     const endTime = parseTime(end);
     if (!crewId) next.crew = 'Choose who is working.';
-    if (!validDate) next.date = 'Use a date like 2026-10-05.';
+    if (!validDate) next.date = 'Pick a day.';
     if (startTime === undefined) next.start = 'Try a time like 8:00a or 14:30.';
     if (endTime === undefined) next.end = 'Try a time like 4:30p or 16:30.';
     if (startTime && endTime && endTime <= startTime) next.end = 'End must be after the start.';
     setErrors(next);
-    if (Object.values(next).some(Boolean)) return;
+    if (Object.values(next).some(Boolean)) return null;
+    return {
+      crew_id: crewId,
+      shift_date: date,
+      start_time: startTime ?? null,
+      end_time: endTime ?? null,
+      notes: notes.trim() || null,
+    };
+  }
+
+  async function onSave() {
+    const values = validate();
+    if (!values) return;
+    if (movingOntoTimeOff) return;
+    if (moving && destShifts.length && !askMove) {
+      setAskMove(true);
+      return;
+    }
+    await finish(values, 'merge');
+  }
+
+  async function finish(values: NonNullable<ReturnType<typeof validate>>, mode: 'merge' | 'replace') {
     setError(null);
+    setAskMove(false);
     try {
-      await save.mutateAsync({
-        id: existing?.id,
-        values: {
-          crew_id: crewId,
-          shift_date: date,
-          start_time: startTime ?? null,
-          end_time: endTime ?? null,
-          notes: notes.trim() || null,
-        },
-      });
-      router.back();
+      if (moving) {
+        await move.mutateAsync({ shift: existing!, to: date, expectedDest: destShifts.map((s) => s.id), mode });
+      }
+      await save.mutateAsync({ id: existing?.id, values });
+      goBack();
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -120,7 +156,7 @@ function ShiftForm({
     if (!ok) return;
     try {
       await remove.mutateAsync(existing.id);
-      router.back();
+      goBack();
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -140,34 +176,29 @@ function ShiftForm({
 
       <SectionTitle>When</SectionTitle>
       <Card>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.xs }}>
-          <View style={{ flex: 1 }}>
-            <Field
-              label="Date"
-              value={date}
-              onChangeText={setDate}
-              placeholder="YYYY-MM-DD"
-              autoCapitalize="none"
-              autoCorrect={false}
-              error={errors.date}
-            />
-          </View>
-          {validDate ? (
-            <View style={{ flexDirection: 'row', paddingBottom: 6 }}>
-              <IconButton
-                icon={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }}
-                label="Day before"
-                onPress={() => setDate(addDays(date, -1))}
-              />
-              <IconButton
-                icon={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-                label="Day after"
-                onPress={() => setDate(addDays(date, 1))}
-              />
-            </View>
-          ) : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+          <IconButton
+            icon={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }}
+            label="Day before"
+            onPress={() => setDate(addDays(date, -1))}
+          />
+          <Chip label={longDay(date)} selected={picking} onPress={() => setPicking((p) => !p)} />
+          <IconButton
+            icon={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+            label="Day after"
+            onPress={() => setDate(addDays(date, 1))}
+          />
         </View>
-        {validDate ? <AppText muted>{longDay(date)}</AppText> : null}
+        {picking ? (
+          <DatePicker
+            selected={[date]}
+            onPress={(d) => {
+              setDate(d);
+              setPicking(false);
+            }}
+          />
+        ) : null}
+        <ErrorText>{errors.date}</ErrorText>
         <View style={{ flexDirection: 'row', gap: Spacing.md }}>
           <View style={{ flex: 1 }}>
             <Field
@@ -203,7 +234,9 @@ function ShiftForm({
             </AppText>
           ))}
           <AppText variant="caption" style={{ color: theme.danger }}>
-            You can still save it. The shift will show as a conflict until it’s resolved.
+            {movingOntoTimeOff
+              ? 'A shift can’t be moved onto a day off. Pick another day, or change the time off first.'
+              : 'You can still save it. The shift will show as a conflict until it’s resolved.'}
           </AppText>
         </Card>
       ) : null}
@@ -219,13 +252,50 @@ function ShiftForm({
       </Card>
 
       <ErrorText>{error}</ErrorText>
-      <Button
-        label={existing ? 'Save changes' : 'Add shift'}
-        onPress={onSave}
-        loading={save.isPending}
-        disabled={busy}
-      />
-      {existing ? <Button label="Delete shift" variant="danger" onPress={onDelete} disabled={busy} /> : null}
+      {askMove ? (
+        <Card style={{ borderColor: theme.accent }}>
+          <AppText variant="label">{`${crew.find((c) => c.id === crewId)?.name ?? 'They'} is already working ${longDay(date)}`}</AppText>
+          <AppText muted>
+            {destShifts.map((s) => shiftTimeLabel(s)).join(', ')}. Keep that shift too, or replace it with this one?
+          </AppText>
+          <Button
+            label="Keep both"
+            onPress={() => {
+              const v = validate();
+              if (v) finish(v, 'merge');
+            }}
+            disabled={busy}
+          />
+          <Button
+            label="Replace it"
+            variant="danger"
+            onPress={() => {
+              const v = validate();
+              if (v) finish(v, 'replace');
+            }}
+            disabled={busy}
+          />
+          <Button label="Cancel" variant="secondary" onPress={() => setAskMove(false)} disabled={busy} />
+        </Card>
+      ) : (
+        <Button
+          label={existing ? (moving ? 'Move shift' : 'Save changes') : 'Add shift'}
+          onPress={onSave}
+          loading={save.isPending || move.isPending}
+          disabled={busy || movingOntoTimeOff}
+        />
+      )}
+      {existing && !askMove ? (
+        <>
+          <Button
+            label="Copy to other days"
+            variant="secondary"
+            onPress={() => router.push({ pathname: '/shift-copy', params: { id: existing.id } })}
+            disabled={busy}
+          />
+          <Button label="Delete shift" variant="danger" onPress={onDelete} disabled={busy} />
+        </>
+      ) : null}
     </Screen>
   );
 }

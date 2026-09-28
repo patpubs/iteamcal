@@ -284,6 +284,20 @@ export type Database = {
       local_today: { Args: never; Returns: string };
       my_crew_id: { Args: never; Returns: string };
       reorder_crew: { Args: { p_ids: string[] }; Returns: undefined };
+      require_admin: { Args: never; Returns: undefined };
+      duplicate_shift: { Args: { p_shift_id: string; p_dates: string[] }; Returns: number };
+      copy_week: { Args: { p_from: string; p_to: string }; Returns: { batch_id: string; copied: number }[] };
+      undo_copy_week: { Args: { p_batch_id: string }; Returns: number };
+      move_shift: {
+        Args: {
+          p_shift_id: string;
+          p_expected_updated_at: string;
+          p_to: string;
+          p_expected_dest: string[];
+          p_mode?: 'merge' | 'replace';
+        };
+        Returns: undefined;
+      };
       time_off_in_range: {
         Args: { p_from: string; p_to: string };
         Returns: {

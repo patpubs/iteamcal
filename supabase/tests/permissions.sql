@@ -278,4 +278,53 @@ select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
 select pg_temp.expect_error($q$ select public.reorder_crew(array['00000000-0000-0000-0000-00000000c001']::uuid[]) $q$, 'staff reordering crew');
 rollback;
 
+-- Schedule tools: duplicate, copy week, undo, move.
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+insert into public.shifts (id, crew_id, shift_date, start_time, end_time, notes) values
+  ('00000000-0000-0000-0000-0000000005a1', '00000000-0000-0000-0000-00000000c001', '2027-03-01', '08:00', '16:00', 'src'),
+  ('00000000-0000-0000-0000-0000000005a2', '00000000-0000-0000-0000-00000000c001', '2027-03-03', '09:00', '12:00', 'dest');
+insert into public.time_off (crew_id, start_date, end_date, type) values
+  ('00000000-0000-0000-0000-00000000c001', '2027-03-04', '2027-03-04', 'vacation');
+do $$ begin
+  assert public.duplicate_shift('00000000-0000-0000-0000-0000000005a1',
+    array['2027-03-01', '2027-03-02', '2027-03-04', '2027-03-05', '2027-03-05']::date[]) = 2,
+    'duplicate should skip its own day, time off, and repeats';
+  assert (select count(*) from public.shifts where notes = 'src' and shift_date = '2027-03-05') = 1,
+    'duplicate should copy notes and times';
+end $$;
+do $$
+declare r record;
+begin
+  select * into r from public.copy_week('2027-03-03', '2027-03-10');
+  assert r.copied = 4, format('copy week should copy 4 shifts, got %s', r.copied);
+  assert (select count(*) from public.shifts where shift_date = '2027-03-08' and notes = 'src') = 1,
+    'copy week should offset dates by a week';
+  assert public.undo_copy_week(r.batch_id) = 4, 'undo should remove the copies';
+  assert (select count(*) from public.shifts where shift_date between '2027-03-08' and '2027-03-14') = 0,
+    'nothing left after undo';
+end $$;
+select pg_temp.expect_error($q$ select public.copy_week('2027-03-01', '2027-03-07') $q$, 'copy week onto itself');
+select pg_temp.expect_error($q$ select public.move_shift('00000000-0000-0000-0000-0000000005a1',
+  (select updated_at from public.shifts where id = '00000000-0000-0000-0000-0000000005a1'),
+  '2027-03-04', '{}') $q$, 'moving onto time off');
+select pg_temp.expect_error($q$ select public.move_shift('00000000-0000-0000-0000-0000000005a1',
+  '2000-01-01', '2027-03-08', '{}') $q$, 'moving a stale shift');
+select pg_temp.expect_error($q$ select public.move_shift('00000000-0000-0000-0000-0000000005a1',
+  (select updated_at from public.shifts where id = '00000000-0000-0000-0000-0000000005a1'),
+  '2027-03-03', '{}') $q$, 'moving onto a day that changed');
+select public.move_shift('00000000-0000-0000-0000-0000000005a1',
+  (select updated_at from public.shifts where id = '00000000-0000-0000-0000-0000000005a1'),
+  '2027-03-03', array['00000000-0000-0000-0000-0000000005a2']::uuid[], 'replace');
+do $$ begin
+  assert (select shift_date from public.shifts where id = '00000000-0000-0000-0000-0000000005a1') = '2027-03-03',
+    'move should change the date';
+  assert not exists (select 1 from public.shifts where id = '00000000-0000-0000-0000-0000000005a2'),
+    'replace should remove that person''s other shift';
+end $$;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+select pg_temp.expect_error($q$ select public.duplicate_shift('00000000-0000-0000-0000-0000000005a1', array['2027-03-09']::date[]) $q$, 'staff duplicating');
+select pg_temp.expect_error($q$ select public.copy_week('2027-03-01', '2027-03-15') $q$, 'staff copying a week');
+rollback;
+
 \echo 'All permission checks passed.'

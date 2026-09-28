@@ -1,4 +1,4 @@
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 
@@ -15,7 +15,7 @@ import {
   useSetCrewArchived,
 } from '@/features/team';
 import { useTheme } from '@/hooks/use-theme';
-import { confirmAction, errorMessage } from '@/lib/confirm';
+import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
 
 export default function CrewMemberScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -72,7 +72,7 @@ function CrewForm({ existing, allCrew }: { existing?: Crew; allCrew: Crew[] }) {
           ...(existing ? {} : { sort_order: maxOrder + 1 }),
         },
       });
-      router.back();
+      goBack('/more');
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -91,7 +91,7 @@ function CrewForm({ existing, allCrew }: { existing?: Crew; allCrew: Crew[] }) {
     setError(null);
     try {
       await setArchived.mutateAsync({ id: existing.id, archived });
-      router.back();
+      goBack('/more');
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -108,7 +108,7 @@ function CrewForm({ existing, allCrew }: { existing?: Crew; allCrew: Crew[] }) {
     setError(null);
     try {
       await remove.mutateAsync(existing.id);
-      router.back();
+      goBack('/more');
     } catch (e) {
       setError(errorMessage(e));
     }
