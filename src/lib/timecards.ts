@@ -57,10 +57,10 @@ export function readCard(input: CardInput): { values: CardTimes | null; errors: 
   const lunchEnd = parseTime(input.lunchEnd);
 
   if (start === null) errors.start = 'Add a start time.';
-  if (start === undefined) errors.start = 'Try a time like 8:00a or 14:30.';
-  if (end === undefined) errors.end = 'Try a time like 4:30p or 16:30.';
-  if (lunchStart === undefined) errors.lunchStart = 'Try a time like 12:00p.';
-  if (lunchEnd === undefined) errors.lunchEnd = 'Try a time like 12:30p.';
+  if (start === undefined) errors.start = 'Try a time like 8:00 AM or 14:30.';
+  if (end === undefined) errors.end = 'Try a time like 4:30 PM or 16:30.';
+  if (lunchStart === undefined) errors.lunchStart = 'Try a time like 12:00 PM.';
+  if (lunchEnd === undefined) errors.lunchEnd = 'Try a time like 12:30 PM.';
 
   if (start && end && end <= start) errors.end = 'End must be after the start.';
   if (lunchEnd && !lunchStart && lunchStart !== undefined) errors.lunchStart = 'Add when lunch started.';

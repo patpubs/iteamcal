@@ -8,6 +8,7 @@ import { useScheduleRange } from '@/features/schedule';
 import { useCrew } from '@/features/team';
 import { addDays, isDay, rangeLabel, shortDay, shortWeekday, today, weekDays } from '@/lib/dates';
 import { shiftTimeLabel, sortShifts, timeOffLabel, timeOffOn, visibleWeekDays } from '@/lib/schedule';
+import { useTimeFormat } from '@/lib/time-format';
 
 /**
  * The week's schedule on paper (PRD §12): schedule crew in their saved order,
@@ -16,6 +17,7 @@ import { shiftTimeLabel, sortShifts, timeOffLabel, timeOffOn, visibleWeekDays } 
 export default function PrintWeekScreen() {
   const params = useLocalSearchParams<{ date?: string }>();
   const week = useMemo(() => weekDays(params.date && isDay(params.date) ? params.date : today()), [params.date]);
+  useTimeFormat();
   const crew = useCrew();
   const { shifts, timeOff, holidays } = useScheduleRange(week[0], week[6]);
 

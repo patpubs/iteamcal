@@ -18,6 +18,8 @@ import {
   Screen,
   SectionTitle,
   Segmented,
+  Columns,
+  PageHeader,
 } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { type Crew, displayName, useCrew, useProfiles } from '@/features/team';
@@ -30,6 +32,7 @@ import {
   useTimeOffEntries,
   useTimeOffRealtime,
 } from '@/features/time-off';
+import { useIsDesktop } from '@/hooks/use-layout';
 import { useTheme } from '@/hooks/use-theme';
 import { confirmAction, errorMessage } from '@/lib/confirm';
 import { addDays, addMonths, monthLabel, monthStart, today } from '@/lib/dates';
@@ -46,6 +49,7 @@ export default function TimeOffScreen() {
 
 function MyTimeOff() {
   const { profile } = useAuth();
+  const desktop = useIsDesktop();
   const now = today();
   const { pending, decided } = useRequests();
   // Upcoming: anything still running today through the next year.
@@ -79,8 +83,10 @@ function MyTimeOff() {
 
   return (
     <Screen>
-      <AppText variant="title">Time off</AppText>
-      <Button label="Request time off" onPress={() => router.push('/time-off/request')} />
+      <PageHeader title="Time off">
+        {desktop ? <Button compact label="Request time off" onPress={() => router.push('/time-off/request')} /> : null}
+      </PageHeader>
+      {!desktop ? <Button label="Request time off" onPress={() => router.push('/time-off/request')} /> : null}
       <ErrorText>{error}</ErrorText>
 
       {pending.data?.length ? (
@@ -162,13 +168,50 @@ function StatusBadge({ status }: { status: TimeOffRequest['status'] }) {
 
 function AdminTimeOff() {
   const params = useLocalSearchParams<{ tab?: string }>();
+  const desktop = useIsDesktop();
   const tab = params.tab === 'days' ? 'days' : 'requests';
   const { pending } = useRequests();
   const count = pending.data?.length ?? 0;
+  const subtitle = count
+    ? `${count} ${count === 1 ? 'request is' : 'requests are'} waiting on you`
+    : 'No requests waiting';
+
+  if (desktop) {
+    return (
+      <Screen>
+        <PageHeader title="Time off" subtitle={subtitle}>
+          {Platform.OS === 'web' ? (
+            <Button
+              compact
+              variant="secondary"
+              label="Print"
+              onPress={() => router.push({ pathname: '/print-time-off', params: { month: monthStart(today()) } })}
+            />
+          ) : null}
+          <Button compact label="Record time off" onPress={() => router.push('/time-off/entry')} />
+        </PageHeader>
+        <Columns
+          sideWidth={440}
+          main={
+            <>
+              <SectionTitle>Requests</SectionTitle>
+              <AdminRequests />
+            </>
+          }
+          side={
+            <>
+              <SectionTitle>Days off</SectionTitle>
+              <AdminDaysOff />
+            </>
+          }
+        />
+      </Screen>
+    );
+  }
 
   return (
     <Screen>
-      <AppText variant="title">Time off</AppText>
+      <PageHeader title="Time off" />
       <Segmented
         options={[
           { value: 'requests', label: count ? `Requests (${count})` : 'Requests' },
@@ -319,6 +362,7 @@ function RequestCard({
 }
 
 function AdminDaysOff() {
+  const desktop = useIsDesktop();
   const [month, setMonth] = useState(monthStart(today()));
   const last = addDays(addMonths(month, 1), -1);
   const entries = useTimeOffEntries(month, last);
@@ -342,8 +386,8 @@ function AdminDaysOff() {
           onPress={() => setMonth(addMonths(month, 1))}
         />
       </View>
-      <Button label="Record time off" onPress={() => router.push('/time-off/entry')} />
-      {Platform.OS === 'web' ? (
+      {!desktop ? <Button label="Record time off" onPress={() => router.push('/time-off/entry')} /> : null}
+      {Platform.OS === 'web' && !desktop ? (
         <Button
           label="Print this month"
           variant="secondary"

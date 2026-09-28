@@ -1,4 +1,5 @@
 import { isWeekend } from './dates';
+import { formatTime, formatTimeRange } from '@/lib/time-format';
 
 // Pure schedule rules shared by the week, month, and list views.
 
@@ -76,19 +77,11 @@ export function timeOffLabel(type: TimeOffLike['type']) {
   }
 }
 
-/** "09:00:00" → "9:00a", "13:30" → "1:30p". */
-export function shortTime(value: string) {
-  const [h, m] = value.split(':').map(Number);
-  const suffix = h < 12 ? 'a' : 'p';
-  const hour = h % 12 === 0 ? 12 : h % 12;
-  return `${hour}${m ? `:${String(m).padStart(2, '0')}` : ''}${suffix}`;
-}
-
 export function shiftTimeLabel(shift: Pick<ShiftLike, 'start_time' | 'end_time'>) {
   const { start_time: s, end_time: e } = shift;
-  if (s && e) return `${shortTime(s)}–${shortTime(e)}`;
-  if (s) return `From ${shortTime(s)}`;
-  if (e) return `Until ${shortTime(e)}`;
+  if (s && e) return formatTimeRange(s, e);
+  if (s) return `From ${formatTime(s)}`;
+  if (e) return `Until ${formatTime(e)}`;
   return 'No set time';
 }
 

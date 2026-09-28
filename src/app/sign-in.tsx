@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { AppText, Button, Card, Field, Screen } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignInScreen() {
-  const theme = useTheme();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sentTo, setSentTo] = useState<string | null>(null);
@@ -61,9 +59,11 @@ export default function SignInScreen() {
     <Screen>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.wrap}>
         <View style={styles.brand}>
-          <View style={[styles.logo, { backgroundColor: theme.primary }]}>
-            <AppText style={[styles.logoText, { color: theme.primaryText }]}>iT</AppText>
-          </View>
+          <Image
+            source={require('../../assets/images/logo.png')}
+            accessibilityIgnoresInvertColors
+            style={styles.logo}
+          />
           <AppText variant="title">iTeamCal</AppText>
           <AppText muted>Schedules, time off, and timecards for the team.</AppText>
         </View>
@@ -126,6 +126,5 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   wrap: { width: '100%', maxWidth: 440, alignSelf: 'center', gap: Spacing.xl, paddingTop: Spacing.xxl },
   brand: { gap: Spacing.sm },
-  logo: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  logoText: { fontSize: 20, fontWeight: '800' },
+  logo: { width: 56, height: 56, borderRadius: 14 },
 });

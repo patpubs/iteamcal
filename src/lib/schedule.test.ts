@@ -63,7 +63,7 @@ describe('schedule rules', () => {
   });
 
   it('labels shift times', () => {
-    expect(shiftTimeLabel({ start_time: '08:00:00', end_time: '16:30:00' })).toBe('8a–4:30p');
+    expect(shiftTimeLabel({ start_time: '08:00:00', end_time: '16:30:00' })).toBe('8:00 AM – 4:30 PM');
     expect(shiftTimeLabel({ start_time: null, end_time: null })).toBe('No set time');
   });
 

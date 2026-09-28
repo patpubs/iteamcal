@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { CrewWeekCard, TodayCard, WeekList, WeekNav, WeekTotal } from '@/components/timecards/parts';
-import { AppText, Card, ErrorText, Loading, Screen, Segmented } from '@/components/ui';
+import { AppText, Card, Columns, ErrorText, Loading, PageHeader, Screen, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { displayName, useCrew, useProfiles } from '@/features/team';
 import {
@@ -13,6 +13,7 @@ import {
   useTimecardsHidden,
   useTimecardsRealtime,
 } from '@/features/timecards';
+import { useIsDesktop } from '@/hooks/use-layout';
 import { errorMessage } from '@/lib/confirm';
 import { isDay, today, weekDays } from '@/lib/dates';
 import { formatHours, totalHours } from '@/lib/timecards';
@@ -28,6 +29,7 @@ export default function TimecardsScreen() {
   const params = useLocalSearchParams<{ week?: string; tab?: string }>();
   const { isAdmin } = useAuth();
   const hidden = useTimecardsHidden();
+  const desktop = useIsDesktop();
   const now = today();
   const days = useMemo(() => weekDays(params.week && isDay(params.week) ? params.week : now), [params.week, now]);
 
@@ -54,8 +56,16 @@ export default function TimecardsScreen() {
 
   return (
     <Screen>
-      <AppText variant="title">Timecards</AppText>
-      {isAdmin && !hidden ? <Segmented options={TABS} value={tab} onChange={(t) => go({ tab: t })} /> : null}
+      <PageHeader title="Timecards">
+        {isAdmin && !hidden && desktop ? (
+          <View style={{ width: 280 }}>
+            <Segmented options={TABS} value={tab} onChange={(t) => go({ tab: t })} />
+          </View>
+        ) : null}
+      </PageHeader>
+      {isAdmin && !hidden && !desktop ? (
+        <Segmented options={TABS} value={tab} onChange={(t) => go({ tab: t })} />
+      ) : null}
       {tab === 'crew' ? (
         <CrewWeek days={days} now={now} onWeek={(w) => go({ week: w })} />
       ) : (
@@ -82,24 +92,32 @@ function MyWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: (w
     }
   }
 
+  // Desktop: today's punch card on the left, the week beside it.
   return (
-    <>
-      {todays.isPending ? (
-        <Loading />
-      ) : (
-        <TodayCard card={todays.data?.[0]} now={now} onPunch={onPunch} busy={punch.isPending} error={error} />
-      )}
-      <WeekNav days={days} now={now} onGo={onWeek} />
-      <ErrorText>{week.error ? errorMessage(week.error) : null}</ErrorText>
-      {week.data ? (
+    <Columns
+      sideFirst
+      side={
+        todays.isPending ? (
+          <Loading />
+        ) : (
+          <TodayCard card={todays.data?.[0]} now={now} onPunch={onPunch} busy={punch.isPending} error={error} />
+        )
+      }
+      main={
         <>
-          <WeekList days={days} cards={week.data} now={now} userId={userId} />
-          <WeekTotal cards={week.data} />
+          <WeekNav days={days} now={now} onGo={onWeek} />
+          <ErrorText>{week.error ? errorMessage(week.error) : null}</ErrorText>
+          {week.data ? (
+            <>
+              <WeekList days={days} cards={week.data} now={now} userId={userId} />
+              <WeekTotal cards={week.data} />
+            </>
+          ) : (
+            <Loading />
+          )}
         </>
-      ) : (
-        <Loading />
-      )}
-    </>
+      }
+    />
   );
 }
 
@@ -112,6 +130,7 @@ function CrewWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: 
   const profiles = useProfiles();
   const crew = useCrew();
   const cards = useTimecards(days[0], days[6]);
+  const desktop = useIsDesktop();
 
   const people = useMemo(() => {
     if (!profiles.data || !crew.data) return null;
@@ -148,17 +167,24 @@ function CrewWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: 
             </AppText>
           </Card>
           {people.length ? (
-            <View style={{ gap: Spacing.md }}>
+            <View
+              style={{
+                gap: Spacing.md,
+                flexDirection: desktop ? 'row' : 'column',
+                flexWrap: desktop ? 'wrap' : 'nowrap',
+              }}>
               {people.map((p) => (
-                <CrewWeekCard
-                  key={p.id}
-                  name={p.name}
-                  color={p.color}
-                  userId={p.id}
-                  days={days}
-                  cards={shownCards.filter((c) => c.user_id === p.id)}
-                  now={now}
-                />
+                <View key={p.id} style={desktop ? { width: '48.5%' } : undefined}>
+                  <CrewWeekCard
+                    key={p.id}
+                    name={p.name}
+                    color={p.color}
+                    userId={p.id}
+                    days={days}
+                    cards={shownCards.filter((c) => c.user_id === p.id)}
+                    now={now}
+                  />
+                </View>
               ))}
             </View>
           ) : (

@@ -6,20 +6,18 @@ import { Radius, Spacing } from '@/constants/theme';
 import type { PunchAction, Timecard } from '@/features/timecards';
 import { useTheme } from '@/hooks/use-theme';
 import { addDays, longDay, rangeLabel, shortDay, shortWeekday, weekStart } from '@/lib/dates';
-import { shortTime } from '@/lib/schedule';
+import { formatTime, formatTimeRange, useTimeFormat } from '@/lib/time-format';
 import { formatHours, punchState, totalHours } from '@/lib/timecards';
 
 export function timesLabel(card: Timecard) {
-  return card.end_time
-    ? `${shortTime(card.start_time)}–${shortTime(card.end_time)}`
-    : `From ${shortTime(card.start_time)}`;
+  return card.end_time ? formatTimeRange(card.start_time, card.end_time) : `From ${formatTime(card.start_time)}`;
 }
 
 export function lunchLabel(card: Timecard) {
   if (!card.lunch_start) return null;
   return card.lunch_end
-    ? `Lunch ${shortTime(card.lunch_start)}–${shortTime(card.lunch_end)}`
-    : `Lunch from ${shortTime(card.lunch_start)}`;
+    ? `Lunch ${formatTimeRange(card.lunch_start, card.lunch_end)}`
+    : `Lunch from ${formatTime(card.lunch_start)}`;
 }
 
 /** Monday–Sunday navigation with a jump back to this week. */
@@ -73,6 +71,7 @@ export function TodayCard({
   error: string | null;
 }) {
   const theme = useTheme();
+  useTimeFormat();
   const state = punchState(card);
   const status = {
     none: 'Not clocked in',
@@ -95,7 +94,7 @@ export function TodayCard({
       {card ? (
         <View style={{ gap: 2 }}>
           <AppText>
-            {state === 'done' ? timesLabel(card) : `Since ${shortTime(card.start_time)}`}
+            {state === 'done' ? timesLabel(card) : `Since ${formatTime(card.start_time)}`}
             {card.net_hours != null ? ` · ${formatHours(card.net_hours)}` : ''}
           </AppText>
           {lunchLabel(card) ? (
@@ -136,6 +135,7 @@ export function WeekList({
   now: string;
   userId: string;
 }) {
+  useTimeFormat();
   const byDay = new Map(cards.map((c) => [c.work_date, c]));
   return (
     <Card style={{ paddingVertical: Spacing.xs, gap: 0 }}>

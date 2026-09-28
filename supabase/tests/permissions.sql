@@ -394,4 +394,20 @@ do $$ begin
 end $$;
 rollback;
 
+-- Preferences are personal.
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+insert into public.user_preferences (time_format) values ('short');
+update public.user_preferences set time_format = '24h';
+do $$ begin
+  assert (select time_format from public.user_preferences where user_id = auth.uid()) = '24h', 'own preference should save';
+end $$;
+select pg_temp.expect_error($q$ insert into public.user_preferences (user_id, time_format) values ('00000000-0000-0000-0000-0000000000b2', 'short') $q$, 'setting a coworker preference');
+select pg_temp.expect_error($q$ update public.user_preferences set time_format = 'fancy' $q$, 'an unknown time format');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b2');
+do $$ begin
+  assert (select count(*) from public.user_preferences) = 0, 'others preferences are private';
+end $$;
+rollback;
+
 \echo 'All permission checks passed.'

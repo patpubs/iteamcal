@@ -17,6 +17,10 @@ export const Colors = {
     accentSoft: '#FBEBD2',
     danger: '#B42318',
     dangerSoft: '#FDE7E4',
+    sidebar: '#10352C',
+    sidebarText: '#E9F3EF',
+    sidebarMuted: '#9BB8AE',
+    sidebarActive: 'rgba(255,255,255,0.12)',
   },
   dark: {
     background: '#0F1513',
@@ -32,6 +36,10 @@ export const Colors = {
     accentSoft: '#3A2A12',
     danger: '#F97066',
     dangerSoft: '#3D1714',
+    sidebar: '#131A18',
+    sidebarText: '#E7EEEB',
+    sidebarMuted: '#8FA39D',
+    sidebarActive: 'rgba(79,191,159,0.16)',
   },
 } as const;
 
@@ -60,3 +68,6 @@ export const FontFamily = Platform.select({
 
 // Content never stretches wider than this on desktop.
 export const MaxContentWidth = 960;
+/** Desktop widths: pages and, narrower, forms and detail screens. */
+export const DesktopPageWidth = 1200;
+export const DesktopFormWidth = 720;

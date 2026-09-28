@@ -283,6 +283,12 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['timecards']['Insert']>;
         Relationships: [];
       };
+      user_preferences: {
+        Row: { time_format: 'full' | 'short' | '24h'; updated_at: string; user_id: string };
+        Insert: { time_format?: 'full' | 'short' | '24h'; updated_at?: string; user_id?: string };
+        Update: Partial<Database['public']['Tables']['user_preferences']['Insert']>;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {

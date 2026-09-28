@@ -2,6 +2,7 @@ import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,7 +17,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { FontFamily, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { DesktopFormWidth, DesktopPageWidth, FontFamily, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { useIsDesktop } from '@/hooks/use-layout';
 import { useTheme } from '@/hooks/use-theme';
 
 type TextVariant = 'title' | 'heading' | 'body' | 'label' | 'caption';
@@ -48,7 +50,21 @@ export function Screen({
   underHeader?: boolean;
 }) {
   const theme = useTheme();
-  const inner = <View style={styles.column}>{children}</View>;
+  const desktop = useIsDesktop();
+  const inner = (
+    <View
+      style={[
+        styles.column,
+        desktop && {
+          maxWidth: underHeader ? DesktopFormWidth : DesktopPageWidth,
+          paddingHorizontal: Spacing.xxl + Spacing.sm,
+          paddingVertical: Spacing.xxl,
+          gap: Spacing.xl - 4,
+        },
+      ]}>
+      {children}
+    </View>
+  );
   return (
     <SafeAreaView
       edges={underHeader ? ['left', 'right'] : ['top', 'left', 'right']}
@@ -61,7 +77,89 @@ export function Screen({
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const theme = useTheme();
   return (
-    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }, style]}>{children}</View>
+    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }, cardShadow, style]}>
+      {children}
+    </View>
+  );
+}
+
+// A soft lift on the web, where flat cards on a flat page read as dull.
+const cardShadow: ViewStyle =
+  Platform.OS === 'web' ? { boxShadow: '0 1px 2px rgba(16, 40, 32, 0.04), 0 6px 20px rgba(16, 40, 32, 0.05)' } : {};
+
+/**
+ * Page title with actions beside it. On desktop the actions sit in the
+ * header; on phones they wrap under the title.
+ */
+export function PageHeader({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string | null;
+  children?: ReactNode;
+}) {
+  const desktop = useIsDesktop();
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        alignItems: desktop ? 'flex-end' : 'center',
+        justifyContent: 'space-between',
+        gap: Spacing.md,
+      }}>
+      <View style={{ flexShrink: 1, gap: 2 }}>
+        <AppText
+          variant="title"
+          accessibilityRole="header"
+          style={desktop ? { fontSize: 32, lineHeight: 38 } : undefined}>
+          {title}
+        </AppText>
+        {subtitle ? <AppText muted>{subtitle}</AppText> : null}
+      </View>
+      {children ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.sm }}>
+          {children}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Two columns side by side on desktop, stacked on phones. `side` is the
+ * narrower column's width on desktop.
+ */
+export function Columns({
+  main,
+  side,
+  sideWidth = 360,
+  sideFirst,
+}: {
+  main: ReactNode;
+  side: ReactNode;
+  sideWidth?: number;
+  /** Put the side column on the left on desktop, and first on phones. */
+  sideFirst?: boolean;
+}) {
+  const desktop = useIsDesktop();
+  if (!desktop) {
+    return (
+      <View style={{ gap: Spacing.lg }}>
+        {sideFirst ? side : main}
+        {sideFirst ? main : side}
+      </View>
+    );
+  }
+  const sideCol = <View style={{ width: sideWidth, gap: Spacing.lg }}>{side}</View>;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.xl }}>
+      {sideFirst ? sideCol : null}
+      <View style={{ flex: 1, minWidth: 0, gap: Spacing.lg }}>{main}</View>
+      {sideFirst ? null : sideCol}
+    </View>
   );
 }
 
@@ -71,9 +169,11 @@ type ButtonProps = {
   variant?: 'primary' | 'secondary' | 'danger';
   loading?: boolean;
   disabled?: boolean;
+  /** Sized to its label, for toolbars and page headers. */
+  compact?: boolean;
 };
 
-export function Button({ label, onPress, variant = 'primary', loading, disabled }: ButtonProps) {
+export function Button({ label, onPress, variant = 'primary', loading, disabled, compact }: ButtonProps) {
   const theme = useTheme();
   const palette = {
     primary: { bg: theme.primary, fg: theme.primaryText, border: theme.primary },
@@ -89,12 +189,15 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled 
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
+        compact && styles.buttonCompact,
         { backgroundColor: palette.bg, borderColor: palette.border, opacity: inactive ? 0.6 : pressed ? 0.85 : 1 },
       ]}>
       {loading ? (
         <ActivityIndicator color={palette.fg} />
       ) : (
-        <Text style={[styles.textBase, styles.buttonLabel, { color: palette.fg }]}>{label}</Text>
+        <Text style={[styles.textBase, styles.buttonLabel, compact && { fontSize: 15 }, { color: palette.fg }]}>
+          {label}
+        </Text>
       )}
     </Pressable>
   );
@@ -436,6 +539,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  buttonCompact: { minHeight: 40, paddingHorizontal: Spacing.lg, alignSelf: 'flex-start' },
   buttonLabel: { fontSize: 16, fontWeight: '600' },
   field: { gap: Spacing.xs },
   input: {

@@ -9,7 +9,7 @@ import { type Timecard, useDeleteTimecard, useSaveTimecard, useTimecard } from '
 import { useTheme } from '@/hooks/use-theme';
 import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
 import { isDay, longDay, today } from '@/lib/dates';
-import { shortTime } from '@/lib/schedule';
+import { formatTime } from '@/lib/time-format';
 import { type CardErrors, type CardInput, formatHours, netHours, readCard } from '@/lib/timecards';
 import { useAuth } from '@/providers/auth';
 
@@ -62,10 +62,10 @@ function EntryForm({
   const save = useSaveTimecard();
   const remove = useDeleteTimecard();
   const [input, setInput] = useState<CardInput>({
-    start: existing ? shortTime(existing.start_time) : '',
-    end: existing?.end_time ? shortTime(existing.end_time) : '',
-    lunchStart: existing?.lunch_start ? shortTime(existing.lunch_start) : '',
-    lunchEnd: existing?.lunch_end ? shortTime(existing.lunch_end) : '',
+    start: existing ? formatTime(existing.start_time) : '',
+    end: existing?.end_time ? formatTime(existing.end_time) : '',
+    lunchStart: existing?.lunch_start ? formatTime(existing.lunch_start) : '',
+    lunchEnd: existing?.lunch_end ? formatTime(existing.lunch_end) : '',
   });
   const [errors, setErrors] = useState<CardErrors>({});
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +127,7 @@ function EntryForm({
                   label="Start"
                   value={input.start}
                   onChangeText={set('start')}
-                  placeholder="8:00a"
+                  placeholder={formatTime('08:00')}
                   autoCapitalize="none"
                   error={errors.start}
                 />
@@ -137,7 +137,7 @@ function EntryForm({
                   label="End"
                   value={input.end}
                   onChangeText={set('end')}
-                  placeholder="4:30p"
+                  placeholder={formatTime('16:30')}
                   autoCapitalize="none"
                   error={errors.end}
                 />
@@ -156,7 +156,7 @@ function EntryForm({
                   label="Started"
                   value={input.lunchStart}
                   onChangeText={set('lunchStart')}
-                  placeholder="12:00p"
+                  placeholder={formatTime('12:00')}
                   autoCapitalize="none"
                   error={errors.lunchStart}
                 />
@@ -166,7 +166,7 @@ function EntryForm({
                   label="Ended"
                   value={input.lunchEnd}
                   onChangeText={set('lunchEnd')}
-                  placeholder="12:30p"
+                  placeholder={formatTime('12:30')}
                   autoCapitalize="none"
                   error={errors.lunchEnd}
                 />

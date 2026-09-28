@@ -7,9 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "iteamcal",
     "userInterfaceStyle": "automatic",
-    "ios": {
-      "icon": "./assets/expo.icon"
-    },
+    "ios": {},
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#1F6F5C",
@@ -21,7 +19,9 @@
     },
     "web": {
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "name": "iTeamCal",
+      "shortName": "iTeamCal"
     },
     "plugins": [
       "expo-router",

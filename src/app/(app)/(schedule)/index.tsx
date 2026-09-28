@@ -11,10 +11,22 @@ import { SwipeDays } from '@/components/schedule/swipe-days';
 import type { ScheduleData } from '@/components/schedule/types';
 import { WeekStrip } from '@/components/schedule/week-strip';
 import { WeekView } from '@/components/schedule/week-view';
-import { AppText, Button, Chip, ErrorText, IconButton, Loading, Screen, Segmented } from '@/components/ui';
+import {
+  AppText,
+  Button,
+  Chip,
+  Columns,
+  ErrorText,
+  IconButton,
+  Loading,
+  PageHeader,
+  Screen,
+  Segmented,
+} from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useScheduleRange, useScheduleRealtime } from '@/features/schedule';
 import { useCrew } from '@/features/team';
+import { useIsDesktop } from '@/hooks/use-layout';
 import { errorMessage } from '@/lib/confirm';
 import {
   addDays,
@@ -44,6 +56,7 @@ const WIDE = 760;
 export default function ScheduleScreen() {
   const params = useLocalSearchParams<{ view?: string; date?: string }>();
   const wide = useWindowDimensions().width >= WIDE;
+  const desktop = useIsDesktop();
   const view: View_ =
     params.view === 'day' || params.view === 'week' || params.view === 'month' ? params.view : wide ? 'week' : 'day';
   const now = today();
@@ -112,66 +125,98 @@ export default function ScheduleScreen() {
     );
   else
     body = (
-      <View style={{ gap: Spacing.lg }}>
-        <MonthView
-          data={data}
-          weeks={grid}
-          month={date}
-          selected={date}
-          compact={!wide}
-          onPickDay={(d) => go({ date: d })}
-        />
-        <View style={{ gap: Spacing.sm }}>
-          <AppText variant="heading" accessibilityRole="header">
-            {date === now ? `Today · ${longDay(date)}` : longDay(date)}
-          </AppText>
-          <DayAgenda data={data} day={date} isAdmin={isAdmin} />
-        </View>
-      </View>
+      <Columns
+        main={
+          <MonthView
+            data={data}
+            weeks={grid}
+            month={date}
+            selected={date}
+            compact={!wide}
+            onPickDay={(d) => go({ date: d })}
+          />
+        }
+        side={
+          <View style={{ gap: Spacing.sm }}>
+            <AppText variant="heading" accessibilityRole="header">
+              {date === now ? `Today · ${longDay(date)}` : longDay(date)}
+            </AppText>
+            <DayAgenda data={data} day={date} isAdmin={isAdmin} />
+          </View>
+        }
+      />
     );
+
+  const addShift = () =>
+    router.push({
+      pathname: '/shift',
+      params: { date: view === 'week' ? (days.includes(now) ? now : days[0]) : date },
+    });
+  const copyWeek = () => router.push({ pathname: '/copy-week', params: { from: days[0] } });
+  const printWeek = () => router.push({ pathname: '/print-week', params: { date: days[0] } });
+  const canPrint = Platform.OS === 'web' && !reordering;
+
+  const nav = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, flex: desktop ? undefined : 1 }}>
+      <IconButton
+        icon={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }}
+        label={`Previous ${unit}`}
+        onPress={() => step(-1)}
+      />
+      <View style={{ flex: desktop ? undefined : 1, minWidth: desktop ? 220 : undefined, alignItems: 'center' }}>
+        <AppText variant="heading" style={{ textAlign: 'center' }} accessibilityRole="header">
+          {heading}
+        </AppText>
+      </View>
+      <IconButton
+        icon={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+        label={`Next ${unit}`}
+        onPress={() => step(1)}
+      />
+    </View>
+  );
 
   return (
     <Screen>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <AppText variant="title">Schedule</AppText>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-          {isAdmin ? (
-            <Chip
-              label={reordering ? 'Done' : 'Reorder crew'}
-              selected={reordering}
-              onPress={() => setReordering((r) => !r)}
-            />
-          ) : null}
-          <NotificationBell />
-        </View>
-      </View>
+      <PageHeader title="Schedule" subtitle={desktop ? `Today is ${longDay(now)}` : null}>
+        {isAdmin ? (
+          <Chip
+            label={reordering ? 'Done' : 'Reorder crew'}
+            selected={reordering}
+            onPress={() => setReordering((r) => !r)}
+          />
+        ) : null}
+        {desktop && canPrint ? <Button compact label="Print" variant="secondary" onPress={printWeek} /> : null}
+        {desktop && isAdmin && !reordering && view === 'week' ? (
+          <Button compact label="Copy week" variant="secondary" onPress={copyWeek} />
+        ) : null}
+        {desktop && isAdmin && !reordering ? <Button compact label="Add shift" onPress={addShift} /> : null}
+        <NotificationBell />
+      </PageHeader>
 
       {!reordering || gridReorder ? (
         <>
-          <Segmented options={VIEWS} value={view} onChange={(v) => go({ view: v })} />
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-            <IconButton
-              icon={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }}
-              label={`Previous ${unit}`}
-              onPress={() => step(-1)}
-            />
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <AppText variant="heading" style={{ textAlign: 'center' }} accessibilityRole="header">
-                {heading}
-              </AppText>
+          {desktop ? (
+            // One toolbar row: view switcher, then date navigation.
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.lg }}>
+              <View style={{ width: 300 }}>
+                <Segmented options={VIEWS} value={view} onChange={(v) => go({ view: v })} />
+              </View>
+              <View style={{ flex: 1 }} />
+              {!showingToday ? <Chip label="Back to today" onPress={() => go({ date: now })} /> : null}
+              {nav}
             </View>
-            <IconButton
-              icon={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
-              label={`Next ${unit}`}
-              onPress={() => step(1)}
-            />
-          </View>
-          {!showingToday ? (
-            <View style={{ alignItems: 'center', marginTop: -Spacing.sm }}>
-              <Chip label="Back to today" onPress={() => go({ date: now })} />
-            </View>
-          ) : null}
+          ) : (
+            <>
+              <Segmented options={VIEWS} value={view} onChange={(v) => go({ view: v })} />
+              {nav}
+              {!showingToday ? (
+                <View style={{ alignItems: 'center', marginTop: -Spacing.sm }}>
+                  <Chip label="Back to today" onPress={() => go({ date: now })} />
+                </View>
+              ) : null}
+            </>
+          )}
 
           {view === 'day' && data ? (
             <WeekStrip data={data} days={days} selected={date} onSelect={(d) => go({ date: d })} />
@@ -182,30 +227,14 @@ export default function ScheduleScreen() {
       <ErrorText>{error ? errorMessage(error) : null}</ErrorText>
       {body}
 
-      {Platform.OS === 'web' && !reordering ? (
-        <Button
-          label="Print this week"
-          variant="secondary"
-          onPress={() => router.push({ pathname: '/print-week', params: { date: days[0] } })}
-        />
-      ) : null}
-      {isAdmin && !reordering ? (
+      {!desktop ? (
         <>
-          <Button
-            label="Add shift"
-            onPress={() =>
-              router.push({
-                pathname: '/shift',
-                params: { date: view === 'week' ? (days.includes(now) ? now : days[0]) : date },
-              })
-            }
-          />
-          {view === 'week' ? (
-            <Button
-              label="Copy this week"
-              variant="secondary"
-              onPress={() => router.push({ pathname: '/copy-week', params: { from: days[0] } })}
-            />
+          {canPrint ? <Button label="Print this week" variant="secondary" onPress={printWeek} /> : null}
+          {isAdmin && !reordering ? (
+            <>
+              <Button label="Add shift" onPress={addShift} />
+              {view === 'week' ? <Button label="Copy this week" variant="secondary" onPress={copyWeek} /> : null}
+            </>
           ) : null}
         </>
       ) : null}

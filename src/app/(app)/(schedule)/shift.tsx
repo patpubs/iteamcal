@@ -28,7 +28,8 @@ import { type Crew, useCrew } from '@/features/team';
 import { useTheme } from '@/hooks/use-theme';
 import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
 import { addDays, isDay, longDay, today } from '@/lib/dates';
-import { parseTime, shiftConflicts, shiftTimeLabel, shortTime } from '@/lib/schedule';
+import { parseTime, shiftConflicts, shiftTimeLabel } from '@/lib/schedule';
+import { formatTime } from '@/lib/time-format';
 
 export default function ShiftScreen() {
   const params = useLocalSearchParams<{ id?: string; crew?: string; date?: string }>();
@@ -75,8 +76,8 @@ function ShiftForm({
 
   const [crewId, setCrewId] = useState(existing?.crew_id ?? initialCrew ?? '');
   const [date, setDate] = useState(existing?.shift_date ?? initialDate);
-  const [start, setStart] = useState(existing?.start_time ? shortTime(existing.start_time) : '');
-  const [end, setEnd] = useState(existing?.end_time ? shortTime(existing.end_time) : '');
+  const [start, setStart] = useState(existing?.start_time ? formatTime(existing.start_time) : '');
+  const [end, setEnd] = useState(existing?.end_time ? formatTime(existing.end_time) : '');
   const [notes, setNotes] = useState(existing?.notes ?? '');
   const [errors, setErrors] = useState<Record<string, string | null>>({});
   const [error, setError] = useState<string | null>(null);
@@ -110,8 +111,8 @@ function ShiftForm({
     const endTime = parseTime(end);
     if (!crewId) next.crew = 'Choose who is working.';
     if (!validDate) next.date = 'Pick a day.';
-    if (startTime === undefined) next.start = 'Try a time like 8:00a or 14:30.';
-    if (endTime === undefined) next.end = 'Try a time like 4:30p or 16:30.';
+    if (startTime === undefined) next.start = 'Try a time like 8:00 AM or 14:30.';
+    if (endTime === undefined) next.end = 'Try a time like 4:30 PM or 16:30.';
     if (startTime && endTime && endTime <= startTime) next.end = 'End must be after the start.';
     setErrors(next);
     if (Object.values(next).some(Boolean)) return null;
@@ -205,7 +206,7 @@ function ShiftForm({
               label="Start"
               value={start}
               onChangeText={setStart}
-              placeholder="8:00a"
+              placeholder={formatTime('08:00')}
               autoCapitalize="none"
               error={errors.start}
             />
@@ -215,7 +216,7 @@ function ShiftForm({
               label="End"
               value={end}
               onChangeText={setEnd}
-              placeholder="4:30p"
+              placeholder={formatTime('16:30')}
               autoCapitalize="none"
               error={errors.end}
             />

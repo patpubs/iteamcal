@@ -1,7 +1,19 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { AppText, Badge, Button, Card, Divider, Icon, ListRow, Screen, SectionTitle } from '@/components/ui';
+import {
+  AppText,
+  Badge,
+  Button,
+  Card,
+  Columns,
+  Divider,
+  Icon,
+  ListRow,
+  PageHeader,
+  Screen,
+  SectionTitle,
+} from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { useUnreadCount } from '@/features/notifications';
 import { useProfiles } from '@/features/team';
@@ -17,73 +29,90 @@ export default function MoreScreen() {
 
   return (
     <Screen>
-      <AppText variant="title">More</AppText>
-
-      <Card>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
-          <View
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: Radius.pill,
-              backgroundColor: theme.primarySoft,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-            <AppText variant="heading" style={{ color: theme.primary }}>
-              {(profile?.display_name ?? profile?.email ?? '?').charAt(0).toUpperCase()}
-            </AppText>
-          </View>
-          <View style={{ flex: 1 }}>
-            <AppText variant="label">{profile?.display_name}</AppText>
-            <AppText variant="caption" muted>
-              {profile?.email} · {isAdmin ? 'Admin' : 'Staff'}
-            </AppText>
-          </View>
-        </View>
-        <Button label="Sign out" variant="secondary" onPress={signOut} />
-      </Card>
-
-      <Card style={{ paddingVertical: Spacing.xs, gap: 0 }}>
-        <ListRow
-          title="Notifications"
-          subtitle="Time off decisions and timecard changes"
-          leading={
-            <Icon name={{ ios: 'bell', android: 'notifications', web: 'notifications' }} color={theme.primary} />
-          }
-          trailing={unread > 0 ? <Badge label={`${unread} new`} tone="danger" /> : null}
-          onPress={() => router.push('/more/notifications')}
-        />
-      </Card>
-
-      {isAdmin ? (
-        <>
-          <SectionTitle>Manage</SectionTitle>
-          <Card style={{ paddingVertical: Spacing.xs, gap: 0 }}>
-            <ListRow
-              title="Users"
-              subtitle="Approve sign-ins, admins, and crew links"
-              leading={<Icon name={{ ios: 'person.2', android: 'group', web: 'group' }} color={theme.primary} />}
-              trailing={pendingCount > 0 ? <Badge label={`${pendingCount} waiting`} tone="accent" /> : null}
-              onPress={() => router.push('/more/users')}
-            />
-            <Divider />
-            <ListRow
-              title="Crew"
-              subtitle="Roster, colors, full-time, and timecard settings"
-              leading={<Icon name={{ ios: 'person.3', android: 'badge', web: 'badge' }} color={theme.primary} />}
-              onPress={() => router.push('/more/crew')}
-            />
-            <Divider />
-            <ListRow
-              title="Holidays"
-              subtitle="Office closures shown on the schedule"
-              leading={<Icon name={{ ios: 'flag', android: 'flag', web: 'flag' }} color={theme.primary} />}
-              onPress={() => router.push('/more/holidays')}
-            />
+      <PageHeader title="More" />
+      <Columns
+        sideFirst
+        sideWidth={340}
+        side={
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
+              <View
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: Radius.pill,
+                  backgroundColor: theme.primarySoft,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                <AppText variant="heading" style={{ color: theme.primary }}>
+                  {(profile?.display_name ?? profile?.email ?? '?').charAt(0).toUpperCase()}
+                </AppText>
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText variant="label">{profile?.display_name}</AppText>
+                <AppText variant="caption" muted>
+                  {profile?.email} · {isAdmin ? 'Admin' : 'Staff'}
+                </AppText>
+              </View>
+            </View>
+            <Button label="Sign out" variant="secondary" onPress={signOut} />
           </Card>
-        </>
-      ) : null}
+        }
+        main={
+          <>
+            <Card style={{ paddingVertical: Spacing.xs, gap: 0 }}>
+              <ListRow
+                title="Notifications"
+                subtitle="Time off decisions and timecard changes"
+                leading={
+                  <Icon name={{ ios: 'bell', android: 'notifications', web: 'notifications' }} color={theme.primary} />
+                }
+                trailing={unread > 0 ? <Badge label={`${unread} new`} tone="danger" /> : null}
+                onPress={() => router.push('/more/notifications')}
+              />
+              <Divider />
+              <ListRow
+                title="Settings"
+                subtitle="Time format"
+                leading={
+                  <Icon name={{ ios: 'gearshape', android: 'settings', web: 'settings' }} color={theme.primary} />
+                }
+                onPress={() => router.push('/more/settings')}
+              />
+            </Card>
+
+            {isAdmin ? (
+              <>
+                <SectionTitle>Manage</SectionTitle>
+                <Card style={{ paddingVertical: Spacing.xs, gap: 0 }}>
+                  <ListRow
+                    title="Users"
+                    subtitle="Approve sign-ins, admins, and crew links"
+                    leading={<Icon name={{ ios: 'person.2', android: 'group', web: 'group' }} color={theme.primary} />}
+                    trailing={pendingCount > 0 ? <Badge label={`${pendingCount} waiting`} tone="accent" /> : null}
+                    onPress={() => router.push('/more/users')}
+                  />
+                  <Divider />
+                  <ListRow
+                    title="Crew"
+                    subtitle="Roster, colors, full-time, and timecard settings"
+                    leading={<Icon name={{ ios: 'person.3', android: 'badge', web: 'badge' }} color={theme.primary} />}
+                    onPress={() => router.push('/more/crew')}
+                  />
+                  <Divider />
+                  <ListRow
+                    title="Holidays"
+                    subtitle="Office closures shown on the schedule"
+                    leading={<Icon name={{ ios: 'flag', android: 'flag', web: 'flag' }} color={theme.primary} />}
+                    onPress={() => router.push('/more/holidays')}
+                  />
+                </Card>
+              </>
+            ) : null}
+          </>
+        }
+      />
     </Screen>
   );
 }

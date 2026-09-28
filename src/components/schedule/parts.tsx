@@ -5,6 +5,7 @@ import { Radius, Spacing } from '@/constants/theme';
 import type { Shift, TimeOffEntry } from '@/features/schedule';
 import { useTheme } from '@/hooks/use-theme';
 import { type Conflict, shiftTimeLabel, timeOffLabel } from '@/lib/schedule';
+import { useTimeFormat } from '@/lib/time-format';
 
 /** One shift: crew color bar, times, notes, and any conflict. */
 export function ShiftChip({
@@ -27,6 +28,7 @@ export function ShiftChip({
   const large = size === 'large';
   const theme = useTheme();
   const conflicted = conflicts.length > 0;
+  useTimeFormat();
   const time = shiftTimeLabel(shift);
   return (
     <Pressable
@@ -62,8 +64,9 @@ export function ShiftChip({
               {title}
             </AppText>
           ) : null}
-          <AppText variant={title ? 'caption' : 'label'} numberOfLines={1}>
-            {time}
+          {/* Full times ("9:00 AM – 5:00 PM") can be wider than a grid column, so they wrap between the two times. */}
+          <AppText variant={title ? 'caption' : 'label'} numberOfLines={2}>
+            {time.replace(/ (AM|PM)/g, '\u00a0$1')}
           </AppText>
         </>
       )}
