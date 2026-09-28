@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router/js-tabs';
 
 import { Icon } from '@/components/ui';
+import { useNotificationsRealtime, useUnreadCount } from '@/features/notifications';
 import { useTimecardsHidden } from '@/features/timecards';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/providers/auth';
@@ -10,6 +11,8 @@ export default function AppTabsLayout() {
   const { isAdmin } = useAuth();
   // Crew set to not need timecards don't see the tab (PRD §10); admins keep it for the crew view.
   const hideTimecards = useTimecardsHidden() === true && !isAdmin;
+  const unread = useUnreadCount();
+  useNotificationsRealtime();
   return (
     <Tabs
       screenOptions={{
@@ -51,6 +54,8 @@ export default function AppTabsLayout() {
         name="more"
         options={{
           title: 'More',
+          tabBarBadge: unread ? (unread > 9 ? '9+' : unread) : undefined,
+          tabBarBadgeStyle: { backgroundColor: theme.danger, fontSize: 11 },
           tabBarIcon: ({ color }) => (
             <Icon name={{ ios: 'ellipsis.circle', android: 'more_horiz', web: 'more_horiz' }} color={color} />
           ),

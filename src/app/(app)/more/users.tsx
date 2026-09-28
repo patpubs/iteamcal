@@ -1,7 +1,18 @@
 import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { AppText, Badge, Card, ColorDot, Divider, ErrorText, ListRow, Loading, Screen, SectionTitle } from '@/components/ui';
+import {
+  AppText,
+  Badge,
+  Card,
+  ColorDot,
+  Divider,
+  ErrorText,
+  ListRow,
+  Loading,
+  Screen,
+  SectionTitle,
+} from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { displayName, useCrew, useDeleteInvite, useOpenInvites, useProfiles, type Profile } from '@/features/team';
 import { confirmAction, errorMessage } from '@/lib/confirm';
@@ -23,8 +34,8 @@ export default function UsersScreen() {
   return (
     <Screen underHeader>
       <AppText muted>
-        New sign-ins wait here until you approve them. Link each person to their crew member so they can request
-        time off.
+        New sign-ins wait here until you approve them. Link each person to their crew member so they can request time
+        off.
       </AppText>
       <ErrorText>{profiles.error ? errorMessage(profiles.error) : null}</ErrorText>
 
@@ -92,8 +103,8 @@ export default function UsersScreen() {
             })}
           </Card>
           <AppText variant="caption" muted>
-            These people were brought over from the old app. When they sign in with this email, they’re approved
-            and linked to their crew member automatically. Tap one to remove it.
+            These people were brought over from the old app. When they sign in with this email, they’re approved and
+            linked to their crew member automatically. Tap one to remove it.
           </AppText>
           <ErrorText>{removeInvite.error ? errorMessage(removeInvite.error) : null}</ErrorText>
         </View>

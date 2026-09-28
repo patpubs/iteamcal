@@ -30,12 +30,7 @@ export function AppText({
   const theme = useTheme();
   return (
     <Text
-      style={[
-        styles.textBase,
-        textStyles[variant],
-        { color: muted ? theme.textMuted : theme.text },
-        style,
-      ]}
+      style={[styles.textBase, textStyles[variant], { color: muted ? theme.textMuted : theme.text }, style]}
       {...rest}
     />
   );
@@ -123,7 +118,11 @@ export function Field({ label, error, ...props }: TextInputProps & { label: stri
         ]}
         {...props}
       />
-      {error ? <AppText style={{ color: theme.danger }} variant="caption">{error}</AppText> : null}
+      {error ? (
+        <AppText style={{ color: theme.danger }} variant="caption">
+          {error}
+        </AppText>
+      ) : null}
     </View>
   );
 }
@@ -222,7 +221,13 @@ export function ListRow({
         {footer}
       </View>
       {trailing}
-      {onPress ? <Icon name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} size={16} color={theme.textMuted} /> : null}
+      {onPress ? (
+        <Icon
+          name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
+          size={16}
+          color={theme.textMuted}
+        />
+      ) : null}
     </Pressable>
   );
 }

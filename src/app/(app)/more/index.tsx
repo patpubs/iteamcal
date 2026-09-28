@@ -3,6 +3,7 @@ import { View } from 'react-native';
 
 import { AppText, Badge, Button, Card, Divider, Icon, ListRow, Screen, SectionTitle } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
+import { useUnreadCount } from '@/features/notifications';
 import { useProfiles } from '@/features/team';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/providers/auth';
@@ -11,6 +12,7 @@ export default function MoreScreen() {
   const theme = useTheme();
   const { profile, isAdmin, signOut } = useAuth();
   const profiles = useProfiles();
+  const unread = useUnreadCount();
   const pendingCount = isAdmin ? (profiles.data?.filter((p) => p.approval === 'pending').length ?? 0) : 0;
 
   return (
@@ -40,6 +42,18 @@ export default function MoreScreen() {
           </View>
         </View>
         <Button label="Sign out" variant="secondary" onPress={signOut} />
+      </Card>
+
+      <Card style={{ paddingVertical: Spacing.xs, gap: 0 }}>
+        <ListRow
+          title="Notifications"
+          subtitle="Time off decisions and timecard changes"
+          leading={
+            <Icon name={{ ios: 'bell', android: 'notifications', web: 'notifications' }} color={theme.primary} />
+          }
+          trailing={unread > 0 ? <Badge label={`${unread} new`} tone="danger" /> : null}
+          onPress={() => router.push('/more/notifications')}
+        />
       </Card>
 
       {isAdmin ? (

@@ -127,12 +127,7 @@ function CrewForm({ existing, allCrew }: { existing?: Crew; allCrew: Crew[] }) {
           autoCapitalize="words"
           error={nameError}
         />
-        <Field
-          label="Job title (optional)"
-          value={jobLabel}
-          onChangeText={setJobLabel}
-          placeholder="e.g. Crew lead"
-        />
+        <Field label="Job title (optional)" value={jobLabel} onChangeText={setJobLabel} placeholder="e.g. Crew lead" />
         <AppText variant="caption" muted>
           Job title is just a label. It doesn’t change what someone can do in the app.
         </AppText>
@@ -188,7 +183,12 @@ function CrewForm({ existing, allCrew }: { existing?: Crew; allCrew: Crew[] }) {
       </Card>
 
       <ErrorText>{error}</ErrorText>
-      <Button label={existing ? 'Save changes' : 'Add crew member'} onPress={onSave} loading={save.isPending} disabled={busy} />
+      <Button
+        label={existing ? 'Save changes' : 'Add crew member'}
+        onPress={onSave}
+        loading={save.isPending}
+        disabled={busy}
+      />
 
       {existing ? (
         <>

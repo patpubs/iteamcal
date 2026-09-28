@@ -105,3 +105,15 @@ export function rangeLabel(from: string, to: string) {
     day: 'numeric',
   })}, ${year}`;
 }
+
+/** "Just now", "5 min ago", "3 hr ago", "Yesterday", then "Sep 21", in team time. */
+export function timeAgo(iso: string, now = new Date()) {
+  const minutes = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes} min ago`;
+  const day = today(new Date(iso));
+  const todayNow = today(now);
+  if (day === todayNow) return `${Math.floor(minutes / 60)} hr ago`;
+  if (day === addDays(todayNow, -1)) return 'Yesterday';
+  return shortDay(day);
+}

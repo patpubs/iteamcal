@@ -10,6 +10,7 @@ import {
   weekDays,
   weekStart,
   weekdayIndex,
+  timeAgo,
 } from './dates';
 
 describe('dates', () => {
@@ -60,5 +61,16 @@ describe('dates', () => {
   it('labels ranges', () => {
     expect(rangeLabel('2026-09-28', '2026-10-04')).toBe('Sep 28 – Oct 4, 2026');
     expect(rangeLabel('2026-12-28', '2027-01-03')).toBe('Dec 28, 2026 – Jan 3, 2027');
+  });
+});
+
+describe('timeAgo', () => {
+  const now = new Date('2026-09-28T20:00:00Z'); // 3:00 PM Central
+  it('reads like a person would say it', () => {
+    expect(timeAgo('2026-09-28T19:59:40Z', now)).toBe('Just now');
+    expect(timeAgo('2026-09-28T19:55:00Z', now)).toBe('5 min ago');
+    expect(timeAgo('2026-09-28T14:00:00Z', now)).toBe('6 hr ago');
+    expect(timeAgo('2026-09-28T04:00:00Z', now)).toBe('Yesterday'); // 11 PM Central the day before
+    expect(timeAgo('2026-09-21T15:00:00Z', now)).toBe('Sep 21');
   });
 });

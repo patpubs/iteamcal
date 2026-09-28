@@ -17,6 +17,7 @@ export default function MoreLayout() {
         headerBackTitle: 'Back',
       }}>
       <Stack.Screen name="index" options={{ headerShown: false, title: 'More' }} />
+      <Stack.Screen name="notifications" options={{ title: 'Notifications' }} />
       {/* Admin pages. The database enforces the same rule; this only hides them. */}
       <Stack.Protected guard={isAdmin}>
         <Stack.Screen name="users" options={{ title: 'Users' }} />

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 
 import { TypeBadge } from '@/components/time-off/parts';
 import {
@@ -343,6 +343,13 @@ function AdminDaysOff() {
         />
       </View>
       <Button label="Record time off" onPress={() => router.push('/time-off/entry')} />
+      {Platform.OS === 'web' ? (
+        <Button
+          label="Print this month"
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/print-time-off', params: { month } })}
+        />
+      ) : null}
       <ErrorText>{entries.error ? errorMessage(entries.error) : null}</ErrorText>
       {entries.isPending ? (
         <Loading />

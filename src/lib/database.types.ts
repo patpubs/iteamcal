@@ -102,6 +102,8 @@ export type Database = {
         Row: {
           body: string | null;
           created_at: string;
+          email_error: string | null;
+          emailed_at: string | null;
           id: string;
           kind: string;
           link: string | null;
@@ -112,6 +114,8 @@ export type Database = {
         Insert: {
           body?: string | null;
           created_at?: string;
+          email_error?: string | null;
+          emailed_at?: string | null;
           id?: string;
           kind: string;
           link?: string | null;
@@ -147,8 +151,15 @@ export type Database = {
         Relationships: [];
       };
       settings: {
-        Row: { id: boolean; staff_see_coworker_time_off_details: boolean; timezone: string; updated_at: string };
+        Row: {
+          email_hook_url: string | null;
+          id: boolean;
+          staff_see_coworker_time_off_details: boolean;
+          timezone: string;
+          updated_at: string;
+        };
         Insert: {
+          email_hook_url?: string | null;
           id?: boolean;
           staff_see_coworker_time_off_details?: boolean;
           timezone?: string;
@@ -320,6 +331,5 @@ export type Database = {
 };
 
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
-export type TablesInsert<T extends keyof Database['public']['Tables']> =
-  Database['public']['Tables'][T]['Insert'];
+export type TablesInsert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert'];
 export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];

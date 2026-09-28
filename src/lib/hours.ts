@@ -16,8 +16,7 @@ export function netHours(card: {
 }): number | null {
   if (!card.end_time) return null;
   const worked = toMinutes(card.end_time) - toMinutes(card.start_time);
-  const lunch =
-    card.lunch_start && card.lunch_end ? toMinutes(card.lunch_end) - toMinutes(card.lunch_start) : 0;
+  const lunch = card.lunch_start && card.lunch_end ? toMinutes(card.lunch_end) - toMinutes(card.lunch_start) : 0;
   return Math.round(((worked - lunch) / 60) * 100) / 100;
 }
 

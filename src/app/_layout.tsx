@@ -64,6 +64,9 @@ function RootStack() {
       </Stack.Protected>
       <Stack.Protected guard={!!session && isApproved}>
         <Stack.Screen name="(app)" />
+        {/* Print pages sit outside the tabs so the page is only what prints. */}
+        <Stack.Screen name="print-week" />
+        <Stack.Screen name="print-time-off" />
       </Stack.Protected>
     </Stack>
   );

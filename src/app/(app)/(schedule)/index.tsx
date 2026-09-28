@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { useWindowDimensions, View } from 'react-native';
+import { Platform, useWindowDimensions, View } from 'react-native';
 
+import { NotificationBell } from '@/components/notification-bell';
 import { DayAgenda } from '@/components/schedule/day-agenda';
 import { ListView } from '@/components/schedule/list-view';
 import { MonthView } from '@/components/schedule/month-view';
@@ -133,13 +134,16 @@ export default function ScheduleScreen() {
     <Screen>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <AppText variant="title">Schedule</AppText>
-        {isAdmin ? (
-          <Chip
-            label={reordering ? 'Done' : 'Reorder crew'}
-            selected={reordering}
-            onPress={() => setReordering((r) => !r)}
-          />
-        ) : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+          {isAdmin ? (
+            <Chip
+              label={reordering ? 'Done' : 'Reorder crew'}
+              selected={reordering}
+              onPress={() => setReordering((r) => !r)}
+            />
+          ) : null}
+          <NotificationBell />
+        </View>
       </View>
 
       {!reordering || gridReorder ? (
@@ -178,6 +182,13 @@ export default function ScheduleScreen() {
       <ErrorText>{error ? errorMessage(error) : null}</ErrorText>
       {body}
 
+      {Platform.OS === 'web' && !reordering ? (
+        <Button
+          label="Print this week"
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/print-week', params: { date: days[0] } })}
+        />
+      ) : null}
       {isAdmin && !reordering ? (
         <>
           <Button

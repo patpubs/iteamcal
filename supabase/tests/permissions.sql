@@ -381,4 +381,17 @@ do $$ begin
 end $$;
 rollback;
 
+-- Email bookkeeping belongs to the server, not the app.
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+select pg_temp.expect_error($q$ update public.notifications set emailed_at = now() $q$, 'marking a notification emailed');
+select pg_temp.expect_error($q$ select public.queue_notification_email() $q$, 'calling the email trigger');
+rollback;
+begin;
+insert into public.notifications (user_id, kind, title) values ('00000000-0000-0000-0000-0000000000b1', 'test', 'No hook set');
+do $$ begin
+  assert (select emailed_at from public.notifications where kind = 'test') is null, 'no email without a hook';
+end $$;
+rollback;
+
 \echo 'All permission checks passed.'

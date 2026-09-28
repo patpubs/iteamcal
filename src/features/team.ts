@@ -57,11 +57,7 @@ export function useOpenInvites() {
   return useQuery({
     queryKey: ['invites'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('account_invites')
-        .select('*')
-        .is('claimed_at', null)
-        .order('email');
+      const { data, error } = await supabase.from('account_invites').select('*').is('claimed_at', null).order('email');
       if (error) throw error;
       return data;
     },

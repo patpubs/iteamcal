@@ -74,7 +74,10 @@ export default function UserScreen() {
         </View>
         <View style={{ flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' }}>
           {statusBadge}
-          <Badge label={user.role === 'admin' ? 'Admin' : 'Staff'} tone={user.role === 'admin' ? 'primary' : 'neutral'} />
+          <Badge
+            label={user.role === 'admin' ? 'Admin' : 'Staff'}
+            tone={user.role === 'admin' ? 'primary' : 'neutral'}
+          />
         </View>
         <ErrorText>{error}</ErrorText>
       </Card>

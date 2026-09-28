@@ -18,9 +18,9 @@ describe('schedule rules', () => {
   });
 
   it('shows a weekend day with a shift, time off, or holiday', () => {
-    expect(
-      visibleWeekDays(week, { shifts: [shift('1', '2026-10-03')], timeOff: [], holidays: [] }).at(-1),
-    ).toBe('2026-10-03');
+    expect(visibleWeekDays(week, { shifts: [shift('1', '2026-10-03')], timeOff: [], holidays: [] }).at(-1)).toBe(
+      '2026-10-03',
+    );
     expect(
       visibleWeekDays(week, {
         shifts: [],
