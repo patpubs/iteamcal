@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 
 export type Profile = Tables<'profiles'>;
 export type Crew = Tables<'crew'>;
+export type Invite = Tables<'account_invites'>;
 
 // Colors offered for crew. Chosen to stay readable as text and as a fill in
 // both light and dark mode.
@@ -48,6 +49,33 @@ export function useProfiles() {
       if (error) throw error;
       return data;
     },
+  });
+}
+
+/** Pre-approved emails that haven't signed in yet. */
+export function useOpenInvites() {
+  return useQuery({
+    queryKey: ['invites'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('account_invites')
+        .select('*')
+        .is('claimed_at', null)
+        .order('email');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useDeleteInvite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('account_invites').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['invites'] }),
   });
 }
 

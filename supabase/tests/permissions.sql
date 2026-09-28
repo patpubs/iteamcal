@@ -234,4 +234,34 @@ select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
 select pg_temp.expect_error($q$ select public.timecards_hidden_for(auth.uid()) $q$, 'calling an internal helper');
 commit;
 
+-- Pre-approved sign-ins from the old app.
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+insert into public.account_invites (email, role, crew_id) values
+  ('invited@example.com', 'admin', '00000000-0000-0000-0000-00000000c003'),
+  ('dupe-link@example.com', 'staff', '00000000-0000-0000-0000-00000000c001');
+select pg_temp.expect_error($q$ insert into public.account_invites (email) values ('Mixed@Example.com') $q$, 'invite email must be lowercase');
+commit;
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+do $$ begin
+  assert (select count(*) from public.account_invites) = 0, 'staff should not see invites';
+end $$;
+commit;
+reset role;
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000000000e1', 'Invited@Example.com'),
+  ('00000000-0000-0000-0000-0000000000e2', 'dupe-link@example.com');
+do $$ begin
+  assert (select role::text || '/' || approval::text || '/' || coalesce(crew_id::text, '-') from public.profiles
+          where id = '00000000-0000-0000-0000-0000000000e1')
+    = 'admin/approved/00000000-0000-0000-0000-00000000c003', 'invite should set role, approval, and crew';
+  assert (select claimed_by from public.account_invites where email = 'invited@example.com')
+    = '00000000-0000-0000-0000-0000000000e1', 'invite should be marked claimed';
+  assert (select crew_id from public.profiles where id = '00000000-0000-0000-0000-0000000000e2') is null,
+    'an invite must not steal a crew link another account already has';
+  assert (select approval from public.profiles where id = '00000000-0000-0000-0000-0000000000e2') = 'approved',
+    'the second invite is still approved';
+end $$;
+
 \echo 'All permission checks passed.'

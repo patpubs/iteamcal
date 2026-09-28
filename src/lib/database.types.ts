@@ -12,6 +12,32 @@ export type Database = {
   __InternalSupabase: { PostgrestVersion: '14.5' };
   public: {
     Tables: {
+      account_invites: {
+        Row: {
+          approval: Enums_['approval_status'];
+          claimed_at: string | null;
+          claimed_by: string | null;
+          created_at: string;
+          crew_id: string | null;
+          email: string;
+          id: string;
+          legacy_user_id: string | null;
+          role: Enums_['app_role'];
+        };
+        Insert: {
+          approval?: Enums_['approval_status'];
+          claimed_at?: string | null;
+          claimed_by?: string | null;
+          created_at?: string;
+          crew_id?: string | null;
+          email: string;
+          id?: string;
+          legacy_user_id?: string | null;
+          role?: Enums_['app_role'];
+        };
+        Update: Partial<Database['public']['Tables']['account_invites']['Insert']>;
+        Relationships: [];
+      };
       audit_log: {
         Row: {
           action: string;
@@ -45,6 +71,7 @@ export type Database = {
           hide_timecards: boolean;
           id: string;
           job_label: string | null;
+          legacy_id: number | null;
           name: string;
           sort_order: number;
           updated_at: string;
@@ -57,6 +84,7 @@ export type Database = {
           hide_timecards?: boolean;
           id?: string;
           job_label?: string | null;
+          legacy_id?: number | null;
           name: string;
           sort_order?: number;
           updated_at?: string;
