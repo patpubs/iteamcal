@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { AppText, Badge, Card } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -11,7 +11,18 @@ import { ShiftChip, TimeOffChip } from './parts';
 import type { ScheduleData } from './types';
 
 /** The week as a day-by-day list. Days with nothing on them are skipped. */
-export function ListView({ data, days, isAdmin }: { data: ScheduleData; days: string[]; isAdmin: boolean }) {
+export function ListView({
+  data,
+  days,
+  isAdmin,
+  onPickDay,
+}: {
+  data: ScheduleData;
+  days: string[];
+  isAdmin: boolean;
+  /** Opens one day on its own. */
+  onPickDay?: (day: string) => void;
+}) {
   const theme = useTheme();
 
   const groups = days
@@ -37,15 +48,16 @@ export function ListView({ data, days, isAdmin }: { data: ScheduleData; days: st
     <View style={{ gap: Spacing.lg }}>
       {groups.map((g) => (
         <View key={g.day} style={{ gap: Spacing.sm }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flexWrap: 'wrap' }}>
-            <AppText
-              variant="label"
-              accessibilityRole="header"
-              style={g.day === data.today ? { color: theme.accent } : undefined}>
+          <Pressable
+            accessibilityRole={onPickDay ? 'button' : 'header'}
+            disabled={!onPickDay}
+            onPress={() => onPickDay?.(g.day)}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flexWrap: 'wrap' }}>
+            <AppText variant="label" style={g.day === data.today ? { color: theme.accent } : undefined}>
               {g.day === data.today ? `Today · ${longDay(g.day)}` : longDay(g.day)}
             </AppText>
             {g.holiday ? <Badge label={`${g.holiday.name} · Office closed`} tone="accent" /> : null}
-          </View>
+          </Pressable>
           <Card style={{ gap: Spacing.sm }}>
             {g.shifts.length === 0 && g.off.length === 0 ? <AppText muted>No one is scheduled.</AppText> : null}
             {g.shifts.map((s) => {

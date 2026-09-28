@@ -12,6 +12,7 @@ export function ShiftChip({
   color,
   conflicts,
   title,
+  size = 'compact',
   onPress,
 }: {
   shift: Shift;
@@ -19,8 +20,11 @@ export function ShiftChip({
   conflicts: Conflict[];
   /** Shown above the time, e.g. the crew name in list and day views. */
   title?: string;
+  /** Large puts the name and time on one line, for the phone day view. */
+  size?: 'compact' | 'large';
   onPress?: () => void;
 }) {
+  const large = size === 'large';
   const theme = useTheme();
   const conflicted = conflicts.length > 0;
   const time = shiftTimeLabel(shift);
@@ -36,22 +40,33 @@ export function ShiftChip({
         borderLeftWidth: 4,
         borderLeftColor: color,
         borderRadius: Radius.sm,
-        paddingVertical: 5,
-        paddingHorizontal: Spacing.sm,
-        backgroundColor: conflicted ? theme.dangerSoft : theme.surfaceMuted,
-        borderWidth: conflicted ? 1 : 0,
-        borderColor: theme.danger,
+        paddingVertical: large ? Spacing.md : 5,
+        paddingHorizontal: large ? Spacing.md : Spacing.sm,
+        backgroundColor: conflicted ? theme.dangerSoft : large ? theme.surface : theme.surfaceMuted,
+        borderWidth: conflicted || large ? 1 : 0,
+        borderColor: conflicted ? theme.danger : theme.border,
         opacity: pressed ? 0.75 : 1,
         gap: 1,
       })}>
-      {title ? (
-        <AppText variant="label" numberOfLines={1}>
-          {title}
-        </AppText>
-      ) : null}
-      <AppText variant={title ? 'caption' : 'label'} numberOfLines={1}>
-        {time}
-      </AppText>
+      {large ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+          <AppText variant="label" numberOfLines={1} style={{ flex: 1, fontSize: 16 }}>
+            {title}
+          </AppText>
+          <AppText variant="label">{time}</AppText>
+        </View>
+      ) : (
+        <>
+          {title ? (
+            <AppText variant="label" numberOfLines={1}>
+              {title}
+            </AppText>
+          ) : null}
+          <AppText variant={title ? 'caption' : 'label'} numberOfLines={1}>
+            {time}
+          </AppText>
+        </>
+      )}
       {shift.notes ? (
         <AppText variant="caption" muted numberOfLines={2} style={{ fontSize: 12, lineHeight: 16 }}>
           {shift.notes}

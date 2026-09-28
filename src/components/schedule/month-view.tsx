@@ -15,14 +15,20 @@ export function MonthView({
   data,
   weeks,
   month,
+  selected,
+  compact,
   onPickDay,
 }: {
   data: ScheduleData;
   weeks: string[][];
   month: string;
+  selected: string;
+  /** Phone layout: shorter cells, dots only; the chosen day shows below. */
+  compact: boolean;
   onPickDay: (day: string) => void;
 }) {
   const theme = useTheme();
+  const maxDots = compact ? 4 : MAX_DOTS;
 
   return (
     <View style={{ gap: Spacing.sm }}>
@@ -59,21 +65,34 @@ export function MonthView({
                 <Pressable
                   key={d}
                   accessibilityRole="button"
+                  accessibilityState={{ selected: d === selected }}
                   accessibilityLabel={summary}
                   onPress={() => onPickDay(d)}
                   style={({ pressed }) => [
                     styles.day,
+                    compact && { minHeight: 52, alignItems: 'center' },
                     {
                       backgroundColor: pressed ? theme.primarySoft : holiday ? theme.surfaceMuted : undefined,
                       opacity: inMonth ? 1 : 0.45,
                     },
                   ]}>
-                  <View style={[styles.dayNumber, isToday && { backgroundColor: theme.accent }]}>
-                    <AppText variant="label" style={{ color: isToday ? theme.primaryText : theme.text, fontSize: 13 }}>
+                  <View
+                    style={[
+                      styles.dayNumber,
+                      d === selected
+                        ? { backgroundColor: theme.primary }
+                        : isToday && { borderWidth: 1.5, borderColor: theme.accent },
+                    ]}>
+                    <AppText
+                      variant="label"
+                      style={{
+                        color: d === selected ? theme.primaryText : isToday ? theme.accent : theme.text,
+                        fontSize: 13,
+                      }}>
                       {String(dayOfMonth(d))}
                     </AppText>
                   </View>
-                  {holiday ? (
+                  {holiday && !compact ? (
                     <AppText
                       variant="caption"
                       numberOfLines={1}
@@ -81,17 +100,21 @@ export function MonthView({
                       {holiday.name}
                     </AppText>
                   ) : null}
-                  <View style={styles.dots}>
-                    {working.slice(0, MAX_DOTS).map((id) => (
-                      <ColorDot key={id} color={data.crewById.get(id)?.color ?? theme.textMuted} size={8} />
+                  <View style={[styles.dots, compact && { justifyContent: 'center' }]}>
+                    {working.slice(0, maxDots).map((id) => (
+                      <ColorDot
+                        key={id}
+                        color={data.crewById.get(id)?.color ?? theme.textMuted}
+                        size={compact ? 6 : 8}
+                      />
                     ))}
-                    {working.length > MAX_DOTS ? (
+                    {working.length > maxDots ? (
                       <AppText variant="caption" muted style={{ fontSize: 10, lineHeight: 10 }}>
-                        {`+${working.length - MAX_DOTS}`}
+                        {`+${working.length - maxDots}`}
                       </AppText>
                     ) : null}
                   </View>
-                  {off.length ? (
+                  {off.length && !compact ? (
                     <AppText
                       variant="caption"
                       numberOfLines={1}
@@ -99,7 +122,7 @@ export function MonthView({
                       {`${off.length} off`}
                     </AppText>
                   ) : null}
-                  {conflicted ? (
+                  {conflicted && !compact ? (
                     <AppText
                       variant="caption"
                       style={{ fontSize: 11, lineHeight: 14, color: theme.danger, fontWeight: '700' }}>
@@ -113,7 +136,9 @@ export function MonthView({
         ))}
       </View>
       <AppText variant="caption" muted>
-        Dots are people working that day. Tap a day to open its week.
+        {compact
+          ? 'Dots are people working. Shaded days are office holidays.'
+          : 'Dots are people working that day. Tap a day to see it below.'}
       </AppText>
     </View>
   );
