@@ -28,7 +28,7 @@ export function errorMessage(error: unknown): string {
 }
 
 /** Back to the previous screen, or to the schedule when the page was opened directly. */
-export function goBack(fallback: '/' | '/more' | '/time-off' = '/') {
+export function goBack(fallback: '/' | '/more' | '/time-off' | '/timecards' = '/') {
   if (router.canGoBack()) router.back();
   else router.replace(fallback);
 }

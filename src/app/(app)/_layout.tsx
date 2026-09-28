@@ -1,10 +1,15 @@
 import { Tabs } from 'expo-router/js-tabs';
 
 import { Icon } from '@/components/ui';
+import { useTimecardsHidden } from '@/features/timecards';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/providers/auth';
 
 export default function AppTabsLayout() {
   const theme = useTheme();
+  const { isAdmin } = useAuth();
+  // Crew set to not need timecards don't see the tab (PRD §10); admins keep it for the crew view.
+  const hideTimecards = useTimecardsHidden() === true && !isAdmin;
   return (
     <Tabs
       screenOptions={{
@@ -36,6 +41,7 @@ export default function AppTabsLayout() {
         name="timecards"
         options={{
           title: 'Timecards',
+          href: hideTimecards ? null : undefined,
           tabBarIcon: ({ color }) => (
             <Icon name={{ ios: 'clock', android: 'schedule', web: 'schedule' }} color={color} />
           ),

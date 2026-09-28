@@ -288,6 +288,10 @@ export type Database = {
       duplicate_shift: { Args: { p_shift_id: string; p_dates: string[] }; Returns: number };
       copy_week: { Args: { p_from: string; p_to: string }; Returns: { batch_id: string; copied: number }[] };
       undo_copy_week: { Args: { p_batch_id: string }; Returns: number };
+      punch: {
+        Args: { p_action: 'clock_in' | 'lunch_start' | 'lunch_end' | 'clock_out' };
+        Returns: Database['public']['Tables']['timecards']['Row'];
+      };
       move_shift: {
         Args: {
           p_shift_id: string;

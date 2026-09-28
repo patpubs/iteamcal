@@ -327,4 +327,58 @@ select pg_temp.expect_error($q$ select public.duplicate_shift('00000000-0000-000
 select pg_temp.expect_error($q$ select public.copy_week('2027-03-01', '2027-03-15') $q$, 'staff copying a week');
 rollback;
 
+-- Punch clock uses the server's local time on today's card.
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+select public.punch('clock_in');
+select pg_temp.expect_error($q$ select public.punch('clock_in') $q$, 'clocking in twice');
+select pg_temp.expect_error($q$ select public.punch('lunch_end') $q$, 'ending a lunch that never started');
+select public.punch('lunch_start');
+select pg_temp.expect_error($q$ select public.punch('clock_out') $q$, 'clocking out during lunch');
+select pg_temp.expect_error($q$ select public.punch('lunch_end') $q$, 'a lunch shorter than a minute');
+-- Pretend the day started at midnight so the rest can finish inside one transaction.
+update public.timecards set start_time = '00:00', lunch_start = '00:00'
+  where user_id = auth.uid() and work_date = public.local_today();
+select public.punch('lunch_end');
+select public.punch('clock_out');
+do $$ begin
+  assert (select net_hours from public.timecards where user_id = auth.uid() and work_date = public.local_today()) is not null,
+    'a finished punch day should have hours';
+end $$;
+select pg_temp.expect_error($q$ select public.punch('clock_out') $q$, 'clocking out twice');
+select pg_temp.expect_error($q$ select public.punch('nap') $q$, 'unknown punch');
+select pg_temp.expect_error($q$ select * from public.legacy_timecards $q$, 'reading staged old cards');
+select pg_temp.expect_error($q$ select public.claim_legacy_timecards(auth.uid(), 'L1') $q$, 'claiming old cards by hand');
+rollback;
+
+-- Old timecards move onto the account the first time that person signs in.
+begin;
+insert into public.crew (id, name, sort_order, hide_timecards) values
+  ('00000000-0000-0000-0000-00000000c0f2', 'Office Only', 9, true);
+insert into public.account_invites (email, role, approval, crew_id, legacy_user_id) values
+  ('oldcards@example.com', 'staff', 'approved', null, 'L1'),
+  ('hiddencards@example.com', 'staff', 'approved', '00000000-0000-0000-0000-00000000c0f2', 'L2');
+insert into public.legacy_timecards (legacy_user_id, work_date, start_time, end_time, lunch_start, lunch_end) values
+  ('L1', '2026-08-03', '08:00', '16:30', '12:00', '12:30'),
+  ('L1', '2026-08-04', '08:00', null, null, null),
+  ('L1', '2099-01-01', '08:00', '09:00', null, null),
+  ('L2', '2026-08-03', '08:00', '16:00', null, null);
+insert into auth.users (id, email) values
+  ('00000000-0000-0000-0000-0000000000f1', 'oldcards@example.com'),
+  ('00000000-0000-0000-0000-0000000000f2', 'hiddencards@example.com');
+do $$ begin
+  assert (select count(*) from public.timecards where user_id = '00000000-0000-0000-0000-0000000000f1') = 2,
+    'valid old cards should move to the new account';
+  assert (select net_hours from public.timecards
+          where user_id = '00000000-0000-0000-0000-0000000000f1' and work_date = '2026-08-03') = 8.00,
+    'moved cards keep their hours';
+  assert (select count(*) from public.legacy_timecards where legacy_user_id = 'L1') = 1,
+    'a card that breaks a rule stays staged';
+  assert (select count(*) from public.legacy_timecards where legacy_user_id = 'L2') = 1,
+    'cards for someone who needs no timecards stay staged';
+  assert (select count(*) from public.notifications where user_id = '00000000-0000-0000-0000-0000000000f1') = 0,
+    'moving old cards sends no notifications';
+end $$;
+rollback;
+
 \echo 'All permission checks passed.'
