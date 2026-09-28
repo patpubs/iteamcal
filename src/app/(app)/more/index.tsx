@@ -1,13 +1,17 @@
+import { router } from 'expo-router';
 import { View } from 'react-native';
 
-import { AppText, Button, Card, ComingSoon, Screen } from '@/components/ui';
+import { AppText, Badge, Button, Card, Divider, Icon, ListRow, Screen, SectionTitle } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
+import { useProfiles } from '@/features/team';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/providers/auth';
 
 export default function MoreScreen() {
   const theme = useTheme();
   const { profile, isAdmin, signOut } = useAuth();
+  const profiles = useProfiles();
+  const pendingCount = isAdmin ? (profiles.data?.filter((p) => p.approval === 'pending').length ?? 0) : 0;
 
   return (
     <Screen>
@@ -39,15 +43,25 @@ export default function MoreScreen() {
       </Card>
 
       {isAdmin ? (
-        <ComingSoon
-          phase="Coming in phase 1"
-          title="Manage the team"
-          items={[
-            'Approve new accounts and choose who is an admin',
-            'Crew roster with colors, full-time, and timecard settings',
-            'Link each account to its crew member',
-          ]}
-        />
+        <>
+          <SectionTitle>Manage</SectionTitle>
+          <Card style={{ paddingVertical: Spacing.xs, gap: 0 }}>
+            <ListRow
+              title="Users"
+              subtitle="Approve sign-ins, admins, and crew links"
+              leading={<Icon name={{ ios: 'person.2', android: 'group', web: 'group' }} color={theme.primary} />}
+              trailing={pendingCount > 0 ? <Badge label={`${pendingCount} waiting`} tone="accent" /> : null}
+              onPress={() => router.push('/more/users')}
+            />
+            <Divider />
+            <ListRow
+              title="Crew"
+              subtitle="Roster, colors, full-time, and timecard settings"
+              leading={<Icon name={{ ios: 'person.3', android: 'badge', web: 'badge' }} color={theme.primary} />}
+              onPress={() => router.push('/more/crew')}
+            />
+          </Card>
+        </>
       ) : null}
     </Screen>
   );

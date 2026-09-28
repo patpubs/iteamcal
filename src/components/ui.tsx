@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -41,11 +42,22 @@ export function AppText({
 }
 
 /** Page wrapper: safe areas, scrolling, and a centered column on wide screens. */
-export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
+export function Screen({
+  children,
+  scroll = true,
+  underHeader = false,
+}: {
+  children: ReactNode;
+  scroll?: boolean;
+  /** True when a navigation header already covers the top safe area. */
+  underHeader?: boolean;
+}) {
   const theme = useTheme();
   const inner = <View style={styles.column}>{children}</View>;
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.screen, { backgroundColor: theme.background }]}>
+    <SafeAreaView
+      edges={underHeader ? ['left', 'right'] : ['top', 'left', 'right']}
+      style={[styles.screen, { backgroundColor: theme.background }]}>
       {scroll ? <ScrollView contentContainerStyle={styles.scrollContent}>{inner}</ScrollView> : inner}
     </SafeAreaView>
   );
@@ -152,6 +164,125 @@ export function ComingSoon({ title, phase, items }: { title: string; phase: stri
   );
 }
 
+type Tone = 'neutral' | 'primary' | 'accent' | 'danger';
+
+export function Badge({ label, tone = 'neutral' }: { label: string; tone?: Tone }) {
+  const theme = useTheme();
+  const colors = {
+    neutral: { bg: theme.surfaceMuted, fg: theme.textMuted },
+    primary: { bg: theme.primarySoft, fg: theme.primary },
+    accent: { bg: theme.accentSoft, fg: theme.accent },
+    danger: { bg: theme.dangerSoft, fg: theme.danger },
+  }[tone];
+  return (
+    <View style={[styles.pill, { backgroundColor: colors.bg }]}>
+      <AppText variant="caption" style={{ color: colors.fg, fontWeight: '600' }}>
+        {label}
+      </AppText>
+    </View>
+  );
+}
+
+export function ColorDot({ color, size = 12 }: { color: string; size?: number }) {
+  return <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color }} />;
+}
+
+/** A tappable row inside a Card list. */
+export function ListRow({
+  title,
+  subtitle,
+  leading,
+  trailing,
+  footer,
+  onPress,
+}: {
+  title: string;
+  subtitle?: string | null;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+  /** Extra content under the subtitle, such as badges. */
+  footer?: ReactNode;
+  onPress?: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      onPress={onPress}
+      style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}>
+      {leading}
+      <View style={{ flex: 1, gap: 2 }}>
+        <AppText variant="label">{title}</AppText>
+        {subtitle ? (
+          <AppText variant="caption" muted numberOfLines={1}>
+            {subtitle}
+          </AppText>
+        ) : null}
+        {footer}
+      </View>
+      {trailing}
+      {onPress ? <Icon name={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }} size={16} color={theme.textMuted} /> : null}
+    </Pressable>
+  );
+}
+
+export function Divider() {
+  const theme = useTheme();
+  return <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: theme.border }} />;
+}
+
+export function SwitchRow({
+  label,
+  help,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  help?: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={styles.row}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <AppText variant="label">{label}</AppText>
+        {help ? (
+          <AppText variant="caption" muted>
+            {help}
+          </AppText>
+        ) : null}
+      </View>
+      <Switch
+        accessibilityLabel={label}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ true: theme.primary, false: theme.surfaceMuted }}
+        thumbColor={theme.surface}
+      />
+    </View>
+  );
+}
+
+export function SectionTitle({ children }: { children: string }) {
+  return (
+    <AppText variant="caption" muted style={styles.sectionTitle}>
+      {children.toUpperCase()}
+    </AppText>
+  );
+}
+
+export function ErrorText({ children }: { children: string | null | undefined }) {
+  const theme = useTheme();
+  if (!children) return null;
+  return (
+    <AppText variant="caption" style={{ color: theme.danger }} accessibilityRole="alert">
+      {children}
+    </AppText>
+  );
+}
+
 const textStyles = StyleSheet.create({
   title: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.3 },
   heading: { fontSize: 18, lineHeight: 24, fontWeight: '600' },
@@ -196,6 +327,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    minHeight: 48,
+    paddingVertical: Spacing.sm,
+  },
+  sectionTitle: { letterSpacing: 0.6, fontWeight: '600', marginTop: Spacing.sm },
   pill: {
     alignSelf: 'flex-start',
     paddingHorizontal: Spacing.sm,
