@@ -283,6 +283,7 @@ export type Database = {
       is_approved: { Args: never; Returns: boolean };
       local_today: { Args: never; Returns: string };
       my_crew_id: { Args: never; Returns: string };
+      reorder_crew: { Args: { p_ids: string[] }; Returns: undefined };
       time_off_in_range: {
         Args: { p_from: string; p_to: string };
         Returns: {

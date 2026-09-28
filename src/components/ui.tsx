@@ -283,6 +283,120 @@ export function ErrorText({ children }: { children: string | null | undefined })
   );
 }
 
+/** A row of mutually exclusive options, like Week / Month / List. */
+export function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      accessibilityRole="tablist"
+      style={{ flexDirection: 'row', backgroundColor: theme.surfaceMuted, borderRadius: Radius.md, padding: 3 }}>
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            onPress={() => onChange(o.value)}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingVertical: 7,
+              borderRadius: Radius.sm,
+              backgroundColor: selected ? theme.surface : 'transparent',
+            }}>
+            <AppText variant="label" style={{ color: selected ? theme.text : theme.textMuted }}>
+              {o.label}
+            </AppText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** A compact round button holding one icon, for toolbars. */
+export function IconButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+}: {
+  icon: SymbolViewProps['name'];
+  /** Read aloud by screen readers; the button shows only the icon. */
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      onPress={onPress}
+      hitSlop={6}
+      style={({ pressed }) => ({
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: pressed ? theme.surfaceMuted : 'transparent',
+        opacity: disabled ? 0.35 : 1,
+      })}>
+      <Icon name={icon} size={20} color={theme.text} />
+    </Pressable>
+  );
+}
+
+/** A small pill button, for short secondary actions like "Today". */
+export function Chip({
+  label,
+  onPress,
+  selected,
+  color,
+}: {
+  label: string;
+  onPress: () => void;
+  selected?: boolean;
+  /** Dot shown before the label, such as a crew color. */
+  color?: string;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: Spacing.md,
+        paddingVertical: 6,
+        borderRadius: Radius.pill,
+        borderWidth: 1,
+        borderColor: selected ? theme.primary : theme.border,
+        backgroundColor: selected ? theme.primarySoft : theme.surface,
+        opacity: pressed ? 0.8 : 1,
+      })}>
+      {color ? <ColorDot color={color} size={10} /> : null}
+      <AppText variant="label" style={{ color: selected ? theme.primary : theme.text }}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 const textStyles = StyleSheet.create({
   title: { fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.3 },
   heading: { fontSize: 18, lineHeight: 24, fontWeight: '600' },

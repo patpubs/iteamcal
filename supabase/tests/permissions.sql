@@ -264,4 +264,18 @@ do $$ begin
     'the second invite is still approved';
 end $$;
 
+-- Schedule order: admins reorder crew, staff cannot.
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+select public.reorder_crew(array['00000000-0000-0000-0000-00000000c002', '00000000-0000-0000-0000-00000000c001']::uuid[]);
+do $$ begin
+  assert (select sort_order from public.crew where id = '00000000-0000-0000-0000-00000000c002') = 1,
+    'admin reorder should move Lee first';
+  assert (select sort_order from public.crew where id = '00000000-0000-0000-0000-00000000c001') = 2,
+    'admin reorder should move Sam second';
+end $$;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+select pg_temp.expect_error($q$ select public.reorder_crew(array['00000000-0000-0000-0000-00000000c001']::uuid[]) $q$, 'staff reordering crew');
+rollback;
+
 \echo 'All permission checks passed.'

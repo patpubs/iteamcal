@@ -1,0 +1,172 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+
+import type { Tables, TablesInsert } from '@/lib/database.types';
+import { supabase } from '@/lib/supabase';
+
+export type Shift = Tables<'shifts'>;
+export type Holiday = Tables<'holidays'>;
+export type TimeOffEntry = {
+  id: string;
+  crew_id: string;
+  start_date: string;
+  end_date: string;
+  type: Tables<'time_off'>['type'] | null;
+  reason: string | null;
+};
+
+/** Shifts, time off, and holidays for an inclusive date range. */
+export function useScheduleRange(from: string, to: string) {
+  const shifts = useQuery({
+    queryKey: ['schedule', 'shifts', from, to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('shifts')
+        .select('*')
+        .gte('shift_date', from)
+        .lte('shift_date', to)
+        .order('shift_date')
+        .order('start_time', { nullsFirst: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+  const timeOff = useQuery({
+    queryKey: ['schedule', 'time-off', from, to],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('time_off_in_range', { p_from: from, p_to: to });
+      if (error) throw error;
+      return data as TimeOffEntry[];
+    },
+  });
+  const holidays = useHolidays(from, to);
+  return { shifts, timeOff, holidays };
+}
+
+export function useHolidays(from: string, to: string) {
+  return useQuery({
+    queryKey: ['schedule', 'holidays', from, to],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('holidays')
+        .select('*')
+        .gte('holiday_date', from)
+        .lte('holiday_date', to)
+        .order('holiday_date');
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/** Keeps every open schedule current when anyone changes it. */
+export function useScheduleRealtime() {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const refresh = (key: string[]) => () => queryClient.invalidateQueries({ queryKey: key });
+    const channel = supabase
+      .channel('schedule')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, refresh(['schedule', 'shifts']))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'time_off' }, refresh(['schedule', 'time-off']))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'holidays' }, refresh(['schedule', 'holidays']))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crew' }, refresh(['crew']))
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+}
+
+export function useShift(id: string | undefined) {
+  return useQuery({
+    queryKey: ['schedule', 'shifts', 'one', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('shifts').select('*').eq('id', id!).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+type ShiftValues = Pick<TablesInsert<'shifts'>, 'crew_id' | 'shift_date' | 'start_time' | 'end_time' | 'notes'>;
+
+export function useSaveShift() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, values }: { id?: string; values: ShiftValues }) => {
+      const { error } = id
+        ? await supabase.from('shifts').update(values).eq('id', id)
+        : await supabase.from('shifts').insert(values);
+      if (error) throw error;
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['schedule', 'shifts'] }),
+  });
+}
+
+export function useDeleteShift() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('shifts').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['schedule', 'shifts'] }),
+  });
+}
+
+export function useSaveHoliday() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, values }: { id?: string; values: { holiday_date: string; name: string } }) => {
+      const { error } = id
+        ? await supabase.from('holidays').update(values).eq('id', id)
+        : await supabase.from('holidays').insert(values);
+      if (error) {
+        if (error.code === '23505') throw new Error('There’s already a holiday on that date.');
+        throw error;
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['schedule', 'holidays'] }),
+  });
+}
+
+export function useDeleteHoliday() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('holidays').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['schedule', 'holidays'] }),
+  });
+}
+
+/** Saves a new schedule order; the list shows the new order immediately. */
+export function useReorderCrew() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      const { error } = await supabase.rpc('reorder_crew', { p_ids: ids });
+      if (error) throw error;
+    },
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: ['crew'] });
+      const previous = queryClient.getQueryData<Tables<'crew'>[]>(['crew']);
+      if (previous) {
+        const pos = new Map(ids.map((id, i) => [id, i + 1]));
+        queryClient.setQueryData(
+          ['crew'],
+          [...previous]
+            .map((c) => (pos.has(c.id) ? { ...c, sort_order: pos.get(c.id)! } : c))
+            .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
+        );
+      }
+      return { previous };
+    },
+    onError: (_e, _ids, context) => {
+      if (context?.previous) queryClient.setQueryData(['crew'], context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['crew'] }),
+  });
+}

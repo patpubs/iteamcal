@@ -15,7 +15,7 @@ export default function AppTabsLayout() {
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
       }}>
       <Tabs.Screen
-        name="index"
+        name="(schedule)"
         options={{
           title: 'Schedule',
           tabBarIcon: ({ color }) => (

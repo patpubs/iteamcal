@@ -60,6 +60,13 @@ export default function MoreScreen() {
               leading={<Icon name={{ ios: 'person.3', android: 'badge', web: 'badge' }} color={theme.primary} />}
               onPress={() => router.push('/more/crew')}
             />
+            <Divider />
+            <ListRow
+              title="Holidays"
+              subtitle="Office closures shown on the schedule"
+              leading={<Icon name={{ ios: 'flag', android: 'flag', web: 'flag' }} color={theme.primary} />}
+              onPress={() => router.push('/more/holidays')}
+            />
           </Card>
         </>
       ) : null}
