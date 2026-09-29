@@ -1,6 +1,6 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import {
   AppText,
@@ -9,13 +9,15 @@ import {
   Chip,
   ErrorText,
   Field,
+  Icon,
   IconButton,
   Loading,
   Screen,
   SectionTitle,
 } from '@/components/ui';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { DatePicker } from '@/components/date-picker';
+import { TimePair } from '@/components/time-picker';
 import {
   type Shift,
   useDeleteShift,
@@ -27,7 +29,7 @@ import {
 import { type Crew, useCrew } from '@/features/team';
 import { useTheme } from '@/hooks/use-theme';
 import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
-import { addDays, isDay, longDay, today } from '@/lib/dates';
+import { addDays, isDay, longDay, shortDay, shortWeekday, today } from '@/lib/dates';
 import { parseTime, shiftConflicts, shiftTimeLabel } from '@/lib/schedule';
 import { formatTime } from '@/lib/time-format';
 
@@ -183,7 +185,30 @@ function ShiftForm({
             label="Day before"
             onPress={() => setDate(addDays(date, -1))}
           />
-          <Chip label={longDay(date)} selected={picking} onPress={() => setPicking((p) => !p)} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`${longDay(date)}. ${picking ? 'Close the calendar' : 'Pick a day from the calendar'}`}
+            onPress={() => setPicking((p) => !p)}
+            style={({ pressed }) => ({
+              flex: 1,
+              minWidth: 0,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: Spacing.sm,
+              height: 40,
+              paddingHorizontal: Spacing.md,
+              borderRadius: Radius.lg,
+              borderWidth: 1,
+              borderColor: picking ? theme.primary : theme.border,
+              backgroundColor: picking ? theme.primarySoft : theme.surface,
+              opacity: pressed ? 0.75 : 1,
+            })}>
+            <Icon name={{ ios: 'calendar', android: 'calendar_month', web: 'calendar_month' }} size={18} />
+            <AppText variant="label" numberOfLines={1} style={{ flexShrink: 1 }}>
+              {`${shortWeekday(date)}, ${shortDay(date)}`}
+            </AppText>
+          </Pressable>
           <IconButton
             icon={{ ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' }}
             label="Day after"
@@ -200,28 +225,10 @@ function ShiftForm({
           />
         ) : null}
         <ErrorText>{errors.date}</ErrorText>
-        <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-          <View style={{ flex: 1 }}>
-            <Field
-              label="Start"
-              value={start}
-              onChangeText={setStart}
-              placeholder={formatTime('08:00')}
-              autoCapitalize="none"
-              error={errors.start}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Field
-              label="End"
-              value={end}
-              onChangeText={setEnd}
-              placeholder={formatTime('16:30')}
-              autoCapitalize="none"
-              error={errors.end}
-            />
-          </View>
-        </View>
+        <TimePair
+          first={{ label: 'Start', value: start, onChange: setStart, example: '08:00', error: errors.start }}
+          second={{ label: 'End', value: end, onChange: setEnd, example: '16:30', error: errors.end }}
+        />
         <AppText variant="caption" muted>
           Times are optional. Leave them blank if the hours aren’t set yet.
         </AppText>

@@ -2,8 +2,8 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { AppText, Button, Card, ErrorText, Field, Loading, Screen } from '@/components/ui';
-import { Spacing } from '@/constants/theme';
+import { TimePair } from '@/components/time-picker';
+import { AppText, Button, Card, ErrorText, Loading, Screen } from '@/components/ui';
 import { displayName, useCrew, useProfiles } from '@/features/team';
 import { type Timecard, useDeleteTimecard, useSaveTimecard, useTimecard } from '@/features/timecards';
 import { useTheme } from '@/hooks/use-theme';
@@ -121,28 +121,16 @@ function EntryForm({
         <>
           <Card>
             <AppText variant="label">Shift</AppText>
-            <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-              <View style={{ flex: 1 }}>
-                <Field
-                  label="Start"
-                  value={input.start}
-                  onChangeText={set('start')}
-                  placeholder={formatTime('08:00')}
-                  autoCapitalize="none"
-                  error={errors.start}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Field
-                  label="End"
-                  value={input.end}
-                  onChangeText={set('end')}
-                  placeholder={formatTime('16:30')}
-                  autoCapitalize="none"
-                  error={errors.end}
-                />
-              </View>
-            </View>
+            <TimePair
+              first={{
+                label: 'Start',
+                value: input.start,
+                onChange: set('start'),
+                example: '08:00',
+                error: errors.start,
+              }}
+              second={{ label: 'End', value: input.end, onChange: set('end'), example: '16:30', error: errors.end }}
+            />
             <AppText variant="caption" muted>
               Leave the end blank if the shift is still going.
             </AppText>
@@ -150,28 +138,22 @@ function EntryForm({
 
           <Card>
             <AppText variant="label">Lunch (optional)</AppText>
-            <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-              <View style={{ flex: 1 }}>
-                <Field
-                  label="Started"
-                  value={input.lunchStart}
-                  onChangeText={set('lunchStart')}
-                  placeholder={formatTime('12:00')}
-                  autoCapitalize="none"
-                  error={errors.lunchStart}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Field
-                  label="Ended"
-                  value={input.lunchEnd}
-                  onChangeText={set('lunchEnd')}
-                  placeholder={formatTime('12:30')}
-                  autoCapitalize="none"
-                  error={errors.lunchEnd}
-                />
-              </View>
-            </View>
+            <TimePair
+              first={{
+                label: 'Started',
+                value: input.lunchStart,
+                onChange: set('lunchStart'),
+                example: '12:00',
+                error: errors.lunchStart,
+              }}
+              second={{
+                label: 'Ended',
+                value: input.lunchEnd,
+                onChange: set('lunchEnd'),
+                example: '12:30',
+                error: errors.lunchEnd,
+              }}
+            />
           </Card>
 
           <Card style={{ backgroundColor: theme.primarySoft, borderColor: theme.primarySoft }}>

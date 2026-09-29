@@ -203,24 +203,45 @@ export function Button({ label, onPress, variant = 'primary', loading, disabled,
   );
 }
 
-export function Field({ label, error, ...props }: TextInputProps & { label: string; error?: string | null }) {
+export function Field({
+  label,
+  error,
+  accessory,
+  ...props
+}: TextInputProps & {
+  label: string;
+  error?: string | null;
+  /** Shown beside the box, such as a button that opens a picker. */
+  accessory?: ReactNode;
+}) {
   const theme = useTheme();
+  const input = (
+    <TextInput
+      placeholderTextColor={theme.textMuted}
+      style={[
+        styles.textBase,
+        styles.input,
+        accessory ? { flex: 1, minWidth: 0 } : null,
+        {
+          color: theme.text,
+          backgroundColor: theme.surface,
+          borderColor: error ? theme.danger : theme.border,
+        },
+      ]}
+      {...props}
+    />
+  );
   return (
     <View style={styles.field}>
       <AppText variant="label">{label}</AppText>
-      <TextInput
-        placeholderTextColor={theme.textMuted}
-        style={[
-          styles.textBase,
-          styles.input,
-          {
-            color: theme.text,
-            backgroundColor: theme.surface,
-            borderColor: error ? theme.danger : theme.border,
-          },
-        ]}
-        {...props}
-      />
+      {accessory ? (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+          {input}
+          {accessory}
+        </View>
+      ) : (
+        input
+      )}
       {error ? (
         <AppText style={{ color: theme.danger }} variant="caption">
           {error}
