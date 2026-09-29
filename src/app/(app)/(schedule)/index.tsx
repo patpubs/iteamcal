@@ -7,6 +7,7 @@ import { PushNudge } from '@/components/push-nudge';
 import { DayAgenda } from '@/components/schedule/day-agenda';
 import { ListView } from '@/components/schedule/list-view';
 import { MonthView } from '@/components/schedule/month-view';
+import { PublishBar } from '@/components/schedule/publish-bar';
 import { ReorderList } from '@/components/schedule/reorder-list';
 import { SwipeDays } from '@/components/schedule/swipe-days';
 import type { ScheduleData } from '@/components/schedule/types';
@@ -226,6 +227,9 @@ export default function ScheduleScreen() {
         </>
       ) : null}
 
+      {view !== 'month' && !reordering && data ? (
+        <PublishBar week={days[0]} isAdmin={isAdmin} crewById={data.crewById} />
+      ) : null}
       <ErrorText>{error ? errorMessage(error) : null}</ErrorText>
       {body}
 

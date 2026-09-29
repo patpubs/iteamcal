@@ -56,6 +56,7 @@ update public.profiles set crew_id = '00000000-0000-0000-0000-00000000c002'
   where id = '00000000-0000-0000-0000-0000000000b2';
 insert into public.shifts (crew_id, shift_date, start_time, end_time)
   values ('00000000-0000-0000-0000-00000000c001', '2026-09-01', '08:00', '16:00');
+select public.publish_week('2026-09-01', false);
 insert into public.holidays (holiday_date, name) values ('2026-12-25', 'Christmas');
 select pg_temp.expect_error($q$ insert into public.holidays (holiday_date, name) values ('2026-12-25', 'Dup') $q$, 'duplicate holiday date');
 select pg_temp.expect_error($q$ insert into public.holidays (holiday_date, name) values ('2026-12-26', '  ') $q$, 'blank holiday name');
@@ -455,6 +456,10 @@ do $$ begin
 end $$;
 update public.settings set reminders_enabled = true;
 do $$ begin
+  assert public.send_reminders('2026-08-03 09:30 America/Chicago') = 0, 'draft weeks don''t send reminders';
+end $$;
+insert into public.schedule_weeks (week_start) values ('2026-08-03');
+do $$ begin
   assert public.send_reminders('2026-08-03 09:10 America/Chicago') = 0, 'no reminder inside the grace period';
   assert public.send_reminders('2026-08-03 09:15 America/Chicago') = 2, 'both should get a clock-in reminder';
   assert public.send_reminders('2026-08-03 09:20 America/Chicago') = 0, 'clock-in reminder goes once';
@@ -554,6 +559,58 @@ do $$ begin
           and user_id = '00000000-0000-0000-0000-0000000000b1') = 2, 'supervisor hears about the add and the start change only';
   assert exists (select 1 from public.notifications where kind = 'timecard_edited_by_owner'
                  and body like '%start 9:00 AM → 8:30 AM.'), 'alert shows old and new times';
+end $$;
+rollback;
+
+-- Draft and publish: staff see a week only once it's published.
+begin;
+update public.crew set archived_at = null where id = '00000000-0000-0000-0000-00000000c002';
+update public.profiles set crew_id = '00000000-0000-0000-0000-00000000c002'
+  where id = '00000000-0000-0000-0000-0000000000b2';
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+insert into public.shifts (id, crew_id, shift_date, start_time, end_time) values
+  ('00000000-0000-0000-0000-0000000006a1', '00000000-0000-0000-0000-00000000c001', '2027-05-04', '09:00', '17:00'),
+  ('00000000-0000-0000-0000-0000000006a2', '00000000-0000-0000-0000-00000000c002', '2027-05-05', '10:00', '14:00');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+do $$ begin
+  assert (select count(*) from public.shifts where shift_date between '2027-05-03' and '2027-05-09') = 0, 'staff can''t see a draft week';
+end $$;
+select pg_temp.expect_error($q$ select public.publish_week('2027-05-03') $q$, 'staff publishing');
+select pg_temp.expect_error($q$ insert into public.schedule_weeks (week_start) values ('2027-05-03') $q$, 'staff writing weeks directly');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+do $$ begin
+  assert (select count(*) from public.week_recipients('2027-05-06')) = 2, 'both scheduled people would hear';
+  assert public.publish_week('2027-05-06') = 2, 'publishing tells both scheduled people';
+end $$;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+do $$ begin
+  assert (select count(*) from public.shifts where shift_date between '2027-05-03' and '2027-05-09') = 2, 'staff see a published week';
+  assert (select title from public.notifications where kind = 'schedule_published') = 'Schedule posted for May 3 – May 9', 'posted title';
+  assert (select body from public.notifications where kind = 'schedule_published') = 'Tue May 4 9:00 AM – 5:00 PM', 'posted body lists shifts';
+end $$;
+-- Changes after publishing: only the changed person hears, once the admin sends it.
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+update public.shifts set end_time = '15:00' where id = '00000000-0000-0000-0000-0000000006a2';
+update public.shifts set notes = notes where id = '00000000-0000-0000-0000-0000000006a1';
+do $$ begin
+  assert (select changed_crew from public.schedule_weeks where week_start = '2027-05-03') = array['00000000-0000-0000-0000-00000000c002']::uuid[], 'tracks who changed';
+  assert public.publish_week('2027-05-03') = 1, 'update goes to the changed person only';
+  assert (select changed_crew from public.schedule_weeks where week_start = '2027-05-03') = '{}', 'update clears the list';
+end $$;
+delete from public.shifts where id = '00000000-0000-0000-0000-0000000006a1';
+do $$ begin
+  assert public.publish_week('2027-05-03', false) = 0, 'clearing without telling anyone';
+end $$;
+reset role;
+do $$ begin
+  assert (select body from public.notifications where kind = 'schedule_changed') = 'Wed May 5 10:00 AM – 3:00 PM', 'change shows the new times';
+  assert (select link from public.notifications where kind = 'schedule_changed') = '/?view=week&date=2027-05-03', 'links to the week';
+end $$;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+select public.unpublish_week('2027-05-03');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+do $$ begin
+  assert (select count(*) from public.shifts where shift_date between '2027-05-03' and '2027-05-09') = 0, 'back to draft hides it again';
 end $$;
 rollback;
 

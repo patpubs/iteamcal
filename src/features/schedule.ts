@@ -70,6 +70,8 @@ export function useScheduleRealtime() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'time_off' }, refresh(['schedule', 'time-off']))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'holidays' }, refresh(['schedule', 'holidays']))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'crew' }, refresh(['crew']))
+      // Publishing changes which shifts staff can see.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_weeks' }, refresh(['schedule']))
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -225,5 +227,53 @@ export function useMoveShift() {
       if (error) throw error;
     },
     onSettled: () => refreshShifts(queryClient),
+  });
+}
+
+/** The published state of the Monday–Sunday week starting `week`; null while it's a draft. */
+export function useScheduleWeek(week: string) {
+  return useQuery({
+    queryKey: ['schedule', 'week', week],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('schedule_weeks').select('*').eq('week_start', week).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/** Admins: the crew that publishing (or sending an update for) this week would tell. */
+export function useWeekRecipients(week: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['schedule', 'week-recipients', week],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('week_recipients', { p_week: week });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function usePublishWeek() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ week, notify }: { week: string; notify: boolean }) => {
+      const { data, error } = await supabase.rpc('publish_week', { p_week: week, p_notify: notify });
+      if (error) throw error;
+      return data;
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['schedule'] }),
+  });
+}
+
+export function useUnpublishWeek() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (week: string) => {
+      const { error } = await supabase.rpc('unpublish_week', { p_week: week });
+      if (error) throw error;
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['schedule'] }),
   });
 }

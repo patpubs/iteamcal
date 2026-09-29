@@ -182,6 +182,12 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['settings']['Insert']>;
         Relationships: [];
       };
+      schedule_weeks: {
+        Row: { changed_crew: string[]; published_at: string; published_by: string | null; week_start: string };
+        Insert: { changed_crew?: string[]; published_at?: string; published_by?: string | null; week_start: string };
+        Update: Partial<Database['public']['Tables']['schedule_weeks']['Insert']>;
+        Relationships: [];
+      };
       shifts: {
         Row: {
           copy_batch_id: string | null;
@@ -333,6 +339,9 @@ export type Database = {
         Returns: Database['public']['Tables']['time_off_requests']['Row'];
       };
       is_admin: { Args: never; Returns: boolean };
+      unpublish_week: { Args: { p_week: string }; Returns: undefined };
+      week_recipients: { Args: { p_week: string }; Returns: { crew_id: string; has_account: boolean }[] };
+      publish_week: { Args: { p_week: string; p_notify?: boolean }; Returns: number };
       push_public_key: { Args: never; Returns: string | null };
       push_ready_users: { Args: never; Returns: string[] };
       send_message: {
