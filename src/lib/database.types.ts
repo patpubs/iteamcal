@@ -154,13 +154,21 @@ export type Database = {
         Row: {
           email_hook_url: string | null;
           id: boolean;
+          reminder_minutes: number;
+          reminders_enabled: boolean;
           staff_see_coworker_time_off_details: boolean;
           timezone: string;
           updated_at: string;
+          weekly_review_day: number;
+          weekly_review_time: string;
         };
         Insert: {
           email_hook_url?: string | null;
           id?: boolean;
+          reminder_minutes?: number;
+          reminders_enabled?: boolean;
+          weekly_review_day?: number;
+          weekly_review_time?: string;
           staff_see_coworker_time_off_details?: boolean;
           timezone?: string;
           updated_at?: string;
@@ -283,6 +291,28 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['timecards']['Insert']>;
         Relationships: [];
       };
+      push_subscriptions: {
+        Row: {
+          auth: string;
+          created_at: string;
+          endpoint: string;
+          id: string;
+          p256dh: string;
+          user_agent: string | null;
+          user_id: string;
+        };
+        Insert: {
+          auth: string;
+          created_at?: string;
+          endpoint: string;
+          id?: string;
+          p256dh: string;
+          user_agent?: string | null;
+          user_id: string;
+        };
+        Update: Partial<Database['public']['Tables']['push_subscriptions']['Insert']>;
+        Relationships: [];
+      };
       user_preferences: {
         Row: { time_format: 'full' | 'short' | '24h'; updated_at: string; user_id: string };
         Insert: { time_format?: 'full' | 'short' | '24h'; updated_at?: string; user_id?: string };
@@ -297,6 +327,11 @@ export type Database = {
         Returns: Database['public']['Tables']['time_off_requests']['Row'];
       };
       is_admin: { Args: never; Returns: boolean };
+      push_public_key: { Args: never; Returns: string | null };
+      save_push_subscription: {
+        Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
+        Returns: undefined;
+      };
       is_approved: { Args: never; Returns: boolean };
       local_today: { Args: never; Returns: string };
       my_crew_id: { Args: never; Returns: string };

@@ -410,4 +410,88 @@ do $$ begin
 end $$;
 rollback;
 
+-- Push sign-ups are personal; the keys and reminder log are server-only.
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+select public.save_push_subscription('https://push.example.com/device-1', 'key', 'secret', 'Test phone');
+do $$ begin
+  assert (select count(*) from public.push_subscriptions) = 1, 'own device should save';
+end $$;
+select pg_temp.expect_error($q$ select public.save_push_subscription('http://insecure.example.com/x', 'key', 'secret') $q$, 'a non-https push endpoint');
+select pg_temp.expect_error($q$ select * from public.push_keys $q$, 'reading the push keys');
+select pg_temp.expect_error($q$ select * from public.reminders_sent $q$, 'reading the reminder log');
+select pg_temp.expect_error($q$ select public.send_reminders() $q$, 'sending reminders from the app');
+select pg_temp.expect_error($q$ insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values ('00000000-0000-0000-0000-0000000000b2', 'https://push.example.com/x', 'k', 'a') $q$, 'adding a device for a coworker');
+-- The same device signed in as someone else moves to them.
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b2');
+do $$ begin
+  assert (select count(*) from public.push_subscriptions) = 0, 'others devices are private';
+end $$;
+select public.save_push_subscription('https://push.example.com/device-1', 'key2', 'secret2');
+do $$ begin
+  assert (select count(*) from public.push_subscriptions) = 1, 'device should move to the new account';
+end $$;
+delete from public.push_subscriptions;
+do $$ begin
+  assert (select count(*) from public.push_subscriptions) = 0, 'own device can be removed';
+end $$;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000c1');
+select pg_temp.expect_error($q$ select public.save_push_subscription('https://push.example.com/device-2', 'k', 'a') $q$, 'push for a pending account');
+rollback;
+
+-- Clock-in, clock-out, and weekly reminders (times are US Central).
+begin;
+-- Earlier checks archived Lee; put Lee back on the roster.
+update public.crew set archived_at = null, hide_timecards = false where id = '00000000-0000-0000-0000-00000000c002';
+update public.profiles set crew_id = '00000000-0000-0000-0000-00000000c002'
+  where id = '00000000-0000-0000-0000-0000000000b2';
+-- Monday Aug 3: Sam 9:00–17:00 (with a later shift 18:00–20:00), Lee 9:00–15:00.
+insert into public.shifts (crew_id, shift_date, start_time, end_time) values
+  ('00000000-0000-0000-0000-00000000c001', '2026-08-03', '09:00', '17:00'),
+  ('00000000-0000-0000-0000-00000000c001', '2026-08-03', '18:00', '20:00'),
+  ('00000000-0000-0000-0000-00000000c002', '2026-08-03', '09:00', '15:00');
+do $$ begin
+  assert public.send_reminders('2026-08-03 09:30 America/Chicago') = 0, 'reminders start switched off';
+end $$;
+update public.settings set reminders_enabled = true;
+do $$ begin
+  assert public.send_reminders('2026-08-03 09:10 America/Chicago') = 0, 'no reminder inside the grace period';
+  assert public.send_reminders('2026-08-03 09:15 America/Chicago') = 2, 'both should get a clock-in reminder';
+  assert public.send_reminders('2026-08-03 09:20 America/Chicago') = 0, 'clock-in reminder goes once';
+  assert (select body from public.notifications
+          where user_id = '00000000-0000-0000-0000-0000000000b1' and kind = 'clock_in_reminder')
+         like 'Your shift started at 9:00 AM.%', 'reminder names the start time';
+end $$;
+-- Sam clocked in; Lee never did.
+insert into public.timecards (user_id, work_date, start_time)
+  values ('00000000-0000-0000-0000-0000000000b1', '2026-08-03', '09:18');
+do $$ begin
+  -- 17:15 is 15 minutes after Sam's first shift, but the day's last shift ends at 20:00.
+  assert public.send_reminders('2026-08-03 17:15 America/Chicago') = 0, 'split shift waits for the last one';
+  assert public.send_reminders('2026-08-03 20:15 America/Chicago') = 1, 'open card gets a clock-out reminder';
+  assert (select count(*) from public.notifications where kind = 'clock_out_reminder'
+          and user_id = '00000000-0000-0000-0000-0000000000b1') = 1, 'clock-out reminder goes to Sam';
+  assert public.send_reminders('2026-08-03 20:30 America/Chicago') = 0, 'clock-out reminder goes once';
+end $$;
+-- Time off and hidden timecards mean no reminder.
+insert into public.time_off (crew_id, start_date, end_date, type)
+  values ('00000000-0000-0000-0000-00000000c002', '2026-08-04', '2026-08-04', 'vacation');
+insert into public.shifts (crew_id, shift_date, start_time, end_time)
+  values ('00000000-0000-0000-0000-00000000c002', '2026-08-04', '09:00', '15:00');
+do $$ begin
+  assert public.send_reminders('2026-08-04 09:30 America/Chicago') = 0, 'no reminder on a day off';
+end $$;
+-- Sunday Aug 9 at 6 PM: weekly review for everyone who worked or was scheduled.
+update public.timecards set end_time = '17:00'
+  where user_id = '00000000-0000-0000-0000-0000000000b1' and work_date = '2026-08-03';
+do $$ begin
+  assert public.send_reminders('2026-08-09 17:59 America/Chicago') = 0, 'weekly review waits for its time';
+  assert public.send_reminders('2026-08-09 18:00 America/Chicago') = 2, 'weekly review goes to Sam and Lee';
+  assert public.send_reminders('2026-08-09 18:30 America/Chicago') = 0, 'weekly review goes once';
+  assert (select body from public.notifications
+          where user_id = '00000000-0000-0000-0000-0000000000b1' and kind = 'weekly_review')
+         like 'Your timecards add up to 7.70 hours for Aug 3 – Aug 9.%', 'weekly review shows the total';
+end $$;
+rollback;
+
 \echo 'All permission checks passed.'

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import type { Tables } from '@/lib/database.types';
+import { forgetThisDevice } from '@/lib/push';
 import { supabase } from '@/lib/supabase';
 
 type AuthState = {
@@ -69,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin: profile?.approval === 'approved' && profile.role === 'admin',
     refreshProfile: () => profileQuery.refetch(),
     signOut: async () => {
+      await forgetThisDevice();
       await supabase.auth.signOut();
     },
   };

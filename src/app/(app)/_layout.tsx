@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router/js-tabs';
 import { Icon } from '@/components/ui';
 import { useNotificationsRealtime, useUnreadCount } from '@/features/notifications';
 import { useApplyPreferences } from '@/features/preferences';
+import { useSyncPush } from '@/features/push';
 import { useRequests } from '@/features/time-off';
 import { useTimecardsHidden } from '@/features/timecards';
 import { Sidebar } from '@/components/sidebar';
@@ -22,6 +23,7 @@ export default function AppTabsLayout() {
   const waiting = isAdmin ? (pending.data?.length ?? 0) : 0;
   useNotificationsRealtime();
   useApplyPreferences();
+  useSyncPush();
   return (
     <Tabs
       // Desktop gets a sidebar; phones keep the bottom tab bar.
