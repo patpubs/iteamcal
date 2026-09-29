@@ -7,38 +7,40 @@ import { Spacing } from '@/constants/theme';
 import { usePushStatus, useSetPush } from '@/features/push';
 import { errorMessage } from '@/lib/confirm';
 
-const DISMISSED = 'iteamcal.push-nudge-dismissed';
+const SNOOZED_UNTIL = 'iteamcal.push-nudge-snoozed-until';
+const WEEK = 7 * 24 * 60 * 60 * 1000;
 
-function dismissedBefore() {
+/** "Not now" hides the card on this device for a week. */
+function snoozed() {
   try {
-    return globalThis.localStorage?.getItem(DISMISSED) === '1';
+    return Number(globalThis.localStorage?.getItem(SNOOZED_UNTIL) ?? 0) > Date.now();
   } catch {
     return false;
   }
 }
 
-/** Invites people to turn on push on this device, so clock reminders reach them. */
+/** Shown on the main screen after sign-in until push is on for this device (or snoozed). */
 export function PushNudge() {
   const status = usePushStatus();
   const setPush = useSetPush();
-  const [hidden, setHidden] = useState(dismissedBefore);
+  const [hidden, setHidden] = useState(snoozed);
   const s = status.data;
   if (hidden || (s !== 'off' && s !== 'needs-install')) return null;
 
   const dismiss = () => {
     try {
-      globalThis.localStorage?.setItem(DISMISSED, '1');
+      globalThis.localStorage?.setItem(SNOOZED_UNTIL, String(Date.now() + WEEK));
     } catch {}
     setHidden(true);
   };
 
   return (
     <Card>
-      <AppText variant="label">Get clock reminders on this device</AppText>
+      <AppText variant="label">Turn on notifications for this device</AppText>
       <AppText variant="caption" muted>
         {s === 'needs-install'
           ? 'On iPhone, add iTeamCal to your Home Screen first (Share, then Add to Home Screen), then turn notifications on in Settings.'
-          : 'A quick nudge if you forget to clock in or out, plus updates on your time off.'}
+          : 'Get a heads-up if you forget to clock in or out, when your time off is decided, and when the office sends news like shift changes or weather alerts.'}
       </AppText>
       <ErrorText>{setPush.error ? errorMessage(setPush.error) : null}</ErrorText>
       <View style={{ flexDirection: 'row', gap: Spacing.sm }}>

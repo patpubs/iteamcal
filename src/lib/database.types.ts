@@ -108,6 +108,8 @@ export type Database = {
           kind: string;
           link: string | null;
           read_at: string | null;
+          send_email: boolean;
+          send_push: boolean;
           title: string;
           user_id: string;
         };
@@ -120,6 +122,8 @@ export type Database = {
           kind: string;
           link?: string | null;
           read_at?: string | null;
+          send_email?: boolean;
+          send_push?: boolean;
           title: string;
           user_id: string;
         };
@@ -328,6 +332,11 @@ export type Database = {
       };
       is_admin: { Args: never; Returns: boolean };
       push_public_key: { Args: never; Returns: string | null };
+      push_ready_users: { Args: never; Returns: string[] };
+      send_message: {
+        Args: { p_title: string; p_body: string; p_to?: string[]; p_email?: boolean };
+        Returns: number;
+      };
       save_push_subscription: {
         Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string };
         Returns: undefined;

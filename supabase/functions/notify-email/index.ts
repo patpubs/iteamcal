@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     .update({ emailed_at: new Date().toISOString() })
     .eq('id', id)
     .is('emailed_at', null)
-    .select('id, user_id, kind, title, body, link, profiles(email, display_name)')
+    .select('id, user_id, kind, title, body, link, send_push, send_email, profiles(email, display_name)')
     .maybeSingle();
   if (error) {
     console.error('notify-email: claim failed', error.message);
@@ -53,8 +53,10 @@ Deno.serve(async (req) => {
   }
   if (!note) return json({ skipped: 'already emailed or not found' });
 
-  // Push first: it's quick, and email trouble shouldn't hold it up.
-  await sendPush(db, note).catch((e) => console.error('notify-email: push failed', e));
+  // Push first: it's quick, and email trouble shouldn't hold it up. Some
+  // notifications skip one or the other (the weekly review is email only).
+  if (note.send_push) await sendPush(db, note).catch((e) => console.error('notify-email: push failed', e));
+  if (!note.send_email) return json({ sent: 'push only' });
 
   const profile = note.profiles as unknown as { email: string | null; display_name: string | null } | null;
   const to = profile?.email;

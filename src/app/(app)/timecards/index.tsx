@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { PushNudge } from '@/components/push-nudge';
 import { CrewWeekCard, TodayCard, WeekList, WeekNav, WeekTotal } from '@/components/timecards/parts';
 import { AppText, Card, Columns, ErrorText, Loading, PageHeader, Screen, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -98,14 +97,11 @@ function MyWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: (w
     <Columns
       sideFirst
       side={
-        <>
-          {todays.isPending ? (
-            <Loading />
-          ) : (
-            <TodayCard card={todays.data?.[0]} now={now} onPunch={onPunch} busy={punch.isPending} error={error} />
-          )}
-          <PushNudge />
-        </>
+        todays.isPending ? (
+          <Loading />
+        ) : (
+          <TodayCard card={todays.data?.[0]} now={now} onPunch={onPunch} busy={punch.isPending} error={error} />
+        )
       }
       main={
         <>

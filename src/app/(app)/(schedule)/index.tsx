@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Platform, useWindowDimensions, View } from 'react-native';
 
 import { NotificationBell } from '@/components/notification-bell';
+import { PushNudge } from '@/components/push-nudge';
 import { DayAgenda } from '@/components/schedule/day-agenda';
 import { ListView } from '@/components/schedule/list-view';
 import { MonthView } from '@/components/schedule/month-view';
@@ -193,6 +194,7 @@ export default function ScheduleScreen() {
         {desktop && isAdmin && !reordering ? <Button compact label="Add shift" onPress={addShift} /> : null}
         <NotificationBell />
       </PageHeader>
+      <PushNudge />
 
       {!reordering || gridReorder ? (
         <>

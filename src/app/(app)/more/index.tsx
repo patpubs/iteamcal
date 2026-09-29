@@ -74,7 +74,7 @@ export default function MoreScreen() {
               <Divider />
               <ListRow
                 title="Settings"
-                subtitle="Time format"
+                subtitle="Push notifications and time format"
                 leading={
                   <Icon name={{ ios: 'gearshape', android: 'settings', web: 'settings' }} color={theme.primary} />
                 }
@@ -106,6 +106,15 @@ export default function MoreScreen() {
                     subtitle="Office closures shown on the schedule"
                     leading={<Icon name={{ ios: 'flag', android: 'flag', web: 'flag' }} color={theme.primary} />}
                     onPress={() => router.push('/more/holidays')}
+                  />
+                  <Divider />
+                  <ListRow
+                    title="Send a message"
+                    subtitle="Push a shift change or weather alert to the team"
+                    leading={
+                      <Icon name={{ ios: 'megaphone', android: 'campaign', web: 'campaign' }} color={theme.primary} />
+                    }
+                    onPress={() => router.push('/more/message')}
                   />
                 </Card>
               </>

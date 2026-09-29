@@ -491,6 +491,32 @@ do $$ begin
   assert (select body from public.notifications
           where user_id = '00000000-0000-0000-0000-0000000000b1' and kind = 'weekly_review')
          like 'Your timecards add up to 7.70 hours for Aug 3 – Aug 9.%', 'weekly review shows the total';
+  assert not (select bool_or(send_push) from public.notifications where kind = 'weekly_review'), 'weekly review is email only';
+  assert (select bool_and(send_push and send_email) from public.notifications where kind like 'clock%'), 'clock reminders go by push and email';
+end $$;
+rollback;
+
+-- Admin messages to staff.
+begin;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+select pg_temp.expect_error($q$ select public.send_message('Hi', 'Staff cannot broadcast') $q$, 'staff sending a message');
+do $$ begin
+  assert (select count(*) from public.push_ready_users()) = 0, 'staff cannot see who has push';
+end $$;
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+select pg_temp.expect_error($q$ select public.send_message('  ', 'No title') $q$, 'a message with no title');
+select pg_temp.expect_error($q$ select public.send_message('Hi', 'Nobody', array['00000000-0000-0000-0000-0000000000c1']::uuid[]) $q$, 'a message only to a pending account');
+select public.send_message('Weather alert', 'Office closes at 2 PM today.');
+select public.send_message('Shift change', 'You now start at 10.', array['00000000-0000-0000-0000-0000000000b1']::uuid[], true);
+reset role;
+do $$ begin
+  assert (select count(*) from public.notifications where title = 'Weather alert')
+         = (select count(*) from public.profiles where approval = 'approved') - 1, 'message to everyone but the sender';
+  assert not exists (select 1 from public.notifications where kind = 'message'
+                     and user_id = '00000000-0000-0000-0000-0000000000a1'), 'sender does not message themselves';
+  assert (select bool_and(send_push and not send_email) from public.notifications where title = 'Weather alert'), 'push only unless email asked';
+  assert (select count(*) from public.notifications where title = 'Shift change') = 1, 'message to one person';
+  assert (select bool_and(send_push and send_email) from public.notifications where title = 'Shift change'), 'email when asked';
 end $$;
 rollback;
 
