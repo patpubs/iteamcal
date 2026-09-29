@@ -523,4 +523,38 @@ do $$ begin
 end $$;
 rollback;
 
+-- Admins hear about new requests; supervisors hear about hand edits.
+begin;
+update public.crew set archived_at = null, hide_timecards = false where id = '00000000-0000-0000-0000-00000000c002';
+update public.profiles set crew_id = '00000000-0000-0000-0000-00000000c002'
+  where id = '00000000-0000-0000-0000-0000000000b2';
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b2');
+insert into public.time_off_requests (requester_id, crew_id, start_date, end_date, type, reason)
+  values ('00000000-0000-0000-0000-0000000000b2', '00000000-0000-0000-0000-00000000c002', '2026-12-01', '2026-12-02', 'vacation', 'Family trip');
+update public.profiles set timecard_alerts = true where id = auth.uid();
+reset role;
+do $$ begin
+  assert not (select timecard_alerts from public.profiles where id = '00000000-0000-0000-0000-0000000000b2'), 'staff cannot turn on their own alerts';
+  assert (select count(*) from public.notifications where kind = 'request_new' and body like '%Family trip%') =
+         (select count(*) from public.profiles where role = 'admin' and approval = 'approved'), 'every admin hears about a new request';
+  assert (select title from public.notifications where kind = 'request_new' and body like '%Family trip%' limit 1) = 'Time off request from Lee Park', 'request alert names the person';
+end $$;
+-- Sam supervises; Lee edits by hand, then punches.
+update public.profiles set timecard_alerts = true where id = '00000000-0000-0000-0000-0000000000b1';
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b2');
+insert into public.timecards (user_id, work_date, start_time, end_time)
+  values ('00000000-0000-0000-0000-0000000000b2', '2026-08-05', '09:00', '17:00');
+update public.timecards set start_time = '08:30' where user_id = auth.uid() and work_date = '2026-08-05';
+update public.timecards set lunch_start = '12:00', lunch_end = '12:30' where user_id = auth.uid() and work_date = '2026-08-05';
+delete from public.timecards where user_id = auth.uid() and work_date = public.local_today();
+select public.punch('clock_in');
+reset role;
+do $$ begin
+  assert (select count(*) from public.notifications where kind = 'timecard_edited_by_owner'
+          and user_id = '00000000-0000-0000-0000-0000000000b1') = 2, 'supervisor hears about the add and the start change only';
+  assert exists (select 1 from public.notifications where kind = 'timecard_edited_by_owner'
+                 and body like '%start 9:00 AM → 8:30 AM.'), 'alert shows old and new times';
+end $$;
+rollback;
+
 \echo 'All permission checks passed.'

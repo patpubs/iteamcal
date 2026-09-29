@@ -139,10 +139,12 @@ export type Database = {
           email: string | null;
           id: string;
           role: Enums_['app_role'];
+          timecard_alerts: boolean;
           updated_at: string;
         };
         Insert: {
           approval?: Enums_['approval_status'];
+          timecard_alerts?: boolean;
           created_at?: string;
           crew_id?: string | null;
           display_name?: string | null;

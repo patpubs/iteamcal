@@ -85,6 +85,7 @@ type ProfileChange = {
   role?: Enums<'app_role'>;
   approval?: Enums<'approval_status'>;
   crew_id?: string | null;
+  timecard_alerts?: boolean;
 };
 
 export function useUpdateProfile() {

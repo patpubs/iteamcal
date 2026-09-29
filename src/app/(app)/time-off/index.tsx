@@ -169,7 +169,8 @@ function StatusBadge({ status }: { status: TimeOffRequest['status'] }) {
 function AdminTimeOff() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const desktop = useIsDesktop();
-  const tab = params.tab === 'days' ? 'days' : 'requests';
+  // Phones open on Days off, which gets used most; requests stay one tap away (and on the badge).
+  const tab = params.tab === 'requests' ? 'requests' : 'days';
   const { pending } = useRequests();
   const count = pending.data?.length ?? 0;
   const subtitle = count

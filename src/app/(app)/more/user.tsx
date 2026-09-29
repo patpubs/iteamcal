@@ -14,6 +14,7 @@ import {
   Loading,
   Screen,
   SectionTitle,
+  SwitchRow,
 } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { displayName, useCrew, useProfiles, useUpdateProfile } from '@/features/team';
@@ -147,6 +148,20 @@ export default function UserScreen() {
           </>
         )}
       </Card>
+
+      {user.approval === 'approved' ? (
+        <>
+          <SectionTitle>Alerts</SectionTitle>
+          <Card>
+            <SwitchRow
+              label="Timecard change alerts"
+              help={`${isMe ? 'You get' : `${name} gets`} a push and email when someone types in or changes their own start or end time. Clocking in and out with the buttons doesn’t count.`}
+              value={user.timecard_alerts}
+              onValueChange={(on) => apply({ timecard_alerts: on })}
+            />
+          </Card>
+        </>
+      ) : null}
 
       <SectionTitle>Crew member</SectionTitle>
       <Card style={choosingCrew ? { paddingVertical: Spacing.xs, gap: 0 } : undefined}>
