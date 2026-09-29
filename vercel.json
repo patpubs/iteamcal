@@ -24,5 +24,18 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "iteamcal.vercel.app"
+        }
+      ],
+      "destination": "https://schedule.jkwent.app/:path*",
+      "permanent": false
+    }
   ]
 }

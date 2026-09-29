@@ -10,7 +10,7 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
 
-const APP_URL = Deno.env.get('APP_URL') ?? 'https://iteamcal.vercel.app';
+const APP_URL = Deno.env.get('APP_URL') ?? 'https://schedule.jkwent.app';
 const FROM = 'Schedule & Time Cards App <schedulerapp@jkwent.app>';
 
 const escape = (text: string) =>
