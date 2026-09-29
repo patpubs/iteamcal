@@ -334,7 +334,7 @@ export type Database = {
       push_public_key: { Args: never; Returns: string | null };
       push_ready_users: { Args: never; Returns: string[] };
       send_message: {
-        Args: { p_title: string; p_body: string; p_to?: string[]; p_email?: boolean };
+        Args: { p_title: string; p_body: string; p_to?: string[]; p_push?: boolean; p_email?: boolean };
         Returns: number;
       };
       save_push_subscription: {

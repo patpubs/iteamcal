@@ -13,7 +13,6 @@ import {
   Screen,
   SectionTitle,
   Segmented,
-  SwitchRow,
 } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { displayName, useCrew, useProfiles } from '@/features/team';
@@ -25,6 +24,9 @@ import { useAuth } from '@/providers/auth';
 const QUICK = ['Shift change', 'Weather alert', 'Office closed', 'Reminder'];
 
 type Audience = 'everyone' | 'choose';
+type Channel = 'push' | 'email' | 'both';
+
+const CHANNEL_WORDS: Record<Channel, string> = { push: 'by push', email: 'by email', both: 'by push and email' };
 
 /** Admins send a short push message to everyone or to chosen people. */
 export default function MessageScreen() {
@@ -45,7 +47,9 @@ export default function MessageScreen() {
   const [body, setBody] = useState('');
   const [audience, setAudience] = useState<Audience>('everyone');
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [email, setEmail] = useState(false);
+  const [channel, setChannel] = useState<Channel>('push');
+  const push = channel !== 'email';
+  const email = channel !== 'push';
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<string | null>(null);
@@ -86,17 +90,14 @@ export default function MessageScreen() {
       audience === 'everyone'
         ? `everyone (${recipients.length})`
         : `${recipients.length} ${recipients.length === 1 ? 'person' : 'people'}`;
-    const ok = await confirmAction(
-      `Send to ${who}?`,
-      `“${title.trim()}”${email ? ' by push and email.' : ' by push.'}`,
-      'Send',
-    );
+    const ok = await confirmAction(`Send to ${who}?`, `“${title.trim()}” ${CHANNEL_WORDS[channel]}.`, 'Send');
     if (!ok) return;
     setBusy(true);
     const { data, error: sendError } = await supabase.rpc('send_message', {
       p_title: title,
       p_body: body,
       p_to: audience === 'everyone' ? undefined : [...picked],
+      p_push: push,
       p_email: email,
     });
     setBusy(false);
@@ -149,16 +150,21 @@ export default function MessageScreen() {
         </View>
       ) : null}
 
-      <Card>
-        <SwitchRow
-          label="Also send by email"
-          help="It always goes by push and shows in everyone’s inbox in the app."
-          value={email}
-          onValueChange={setEmail}
-        />
-      </Card>
+      <SectionTitle>Send by</SectionTitle>
+      <Segmented
+        options={[
+          { value: 'push', label: 'Push' },
+          { value: 'email', label: 'Email' },
+          { value: 'both', label: 'Both' },
+        ]}
+        value={channel}
+        onChange={setChannel}
+      />
+      <AppText variant="caption" muted>
+        It also shows in everyone’s inbox in the app.
+      </AppText>
 
-      {recipients.length && ready.data ? (
+      {push && recipients.length && ready.data ? (
         <AppText variant="caption" muted>
           {withoutPush.length === 0
             ? `All ${recipients.length} have push turned on.`

@@ -507,7 +507,9 @@ select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
 select pg_temp.expect_error($q$ select public.send_message('  ', 'No title') $q$, 'a message with no title');
 select pg_temp.expect_error($q$ select public.send_message('Hi', 'Nobody', array['00000000-0000-0000-0000-0000000000c1']::uuid[]) $q$, 'a message only to a pending account');
 select public.send_message('Weather alert', 'Office closes at 2 PM today.');
-select public.send_message('Shift change', 'You now start at 10.', array['00000000-0000-0000-0000-0000000000b1']::uuid[], true);
+select public.send_message('Shift change', 'You now start at 10.', array['00000000-0000-0000-0000-0000000000b1']::uuid[], true, true);
+select public.send_message('Email only', 'Check your inbox.', array['00000000-0000-0000-0000-0000000000b1']::uuid[], false, true);
+select pg_temp.expect_error($q$ select public.send_message('Nowhere', 'x', null, false, false) $q$, 'a message with no way to send it');
 reset role;
 do $$ begin
   assert (select count(*) from public.notifications where title = 'Weather alert')
@@ -516,7 +518,8 @@ do $$ begin
                      and user_id = '00000000-0000-0000-0000-0000000000a1'), 'sender does not message themselves';
   assert (select bool_and(send_push and not send_email) from public.notifications where title = 'Weather alert'), 'push only unless email asked';
   assert (select count(*) from public.notifications where title = 'Shift change') = 1, 'message to one person';
-  assert (select bool_and(send_push and send_email) from public.notifications where title = 'Shift change'), 'email when asked';
+  assert (select bool_and(send_push and send_email) from public.notifications where title = 'Shift change'), 'push and email';
+  assert (select bool_and(not send_push and send_email) from public.notifications where title = 'Email only'), 'email only';
 end $$;
 rollback;
 
