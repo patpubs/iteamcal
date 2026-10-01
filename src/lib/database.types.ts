@@ -4,7 +4,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 type Enums_ = {
   app_role: 'admin' | 'staff';
   approval_status: 'pending' | 'approved' | 'rejected';
-  request_status: 'pending' | 'approved' | 'declined';
+  request_status: 'pending' | 'approved' | 'declined' | 'cancelled';
   time_off_type: 'vacation' | 'sick' | 'personal' | 'other';
 };
 
@@ -338,6 +338,7 @@ export type Database = {
         Args: { p_approve: boolean; p_note?: string; p_request_id: string };
         Returns: Database['public']['Tables']['time_off_requests']['Row'];
       };
+      cancel_time_off: { Args: { p_id: string }; Returns: undefined };
       is_admin: { Args: never; Returns: boolean };
       unpublish_week: { Args: { p_week: string }; Returns: undefined };
       week_recipients: { Args: { p_week: string }; Returns: { crew_id: string; has_account: boolean }[] };

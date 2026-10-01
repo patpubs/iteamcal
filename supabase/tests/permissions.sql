@@ -614,4 +614,45 @@ do $$ begin
 end $$;
 rollback;
 
+-- Cancelling days off; removing turned-away accounts.
+begin;
+update public.crew set archived_at = null where id = '00000000-0000-0000-0000-00000000c002';
+update public.profiles set crew_id = '00000000-0000-0000-0000-00000000c002'
+  where id = '00000000-0000-0000-0000-0000000000b2';
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b2');
+insert into public.time_off_requests (id, requester_id, crew_id, start_date, end_date, type)
+  values ('00000000-0000-0000-0000-0000000007a1', '00000000-0000-0000-0000-0000000000b2',
+          '00000000-0000-0000-0000-00000000c002', public.local_today() + 10, public.local_today() + 11, 'vacation');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+select public.decide_time_off_request('00000000-0000-0000-0000-0000000007a1', true);
+insert into public.time_off (id, crew_id, start_date, end_date, type) values
+  ('00000000-0000-0000-0000-0000000007b1', '00000000-0000-0000-0000-00000000c002', public.local_today() - 2, public.local_today() + 2, 'sick'),
+  ('00000000-0000-0000-0000-0000000007b2', '00000000-0000-0000-0000-00000000c002', public.local_today() + 20, public.local_today() + 22, 'personal'),
+  ('00000000-0000-0000-0000-0000000007b3', '00000000-0000-0000-0000-00000000c001', public.local_today() + 5, public.local_today() + 5, 'personal');
+-- Sam can't cancel Lee's; Lee cancels a future range and the rest of a current one.
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+select pg_temp.expect_error($q$ select public.cancel_time_off((select id from public.time_off where request_id = '00000000-0000-0000-0000-0000000007a1')) $q$, 'cancelling someone else''s day off');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b2');
+select public.cancel_time_off((select id from public.time_off where request_id = '00000000-0000-0000-0000-0000000007a1'));
+select public.cancel_time_off('00000000-0000-0000-0000-0000000007b1');
+reset role;
+do $$ begin
+  assert not exists (select 1 from public.time_off where request_id = '00000000-0000-0000-0000-0000000007a1'), 'future day off removed';
+  assert (select status::text from public.time_off_requests where id = '00000000-0000-0000-0000-0000000007a1') = 'cancelled', 'request shows cancelled';
+  assert (select end_date from public.time_off where id = '00000000-0000-0000-0000-0000000007b1') = public.local_today() - 1, 'past days stay on record';
+  assert (select count(*) from public.notifications where kind = 'time_off_cancelled') =
+         2 * (select count(*) from public.profiles where role = 'admin' and approval = 'approved'), 'admins hear about each cancel';
+  assert (select title from public.notifications where kind = 'time_off_cancelled' limit 1) = 'Lee Park cancelled time off', 'names the person';
+  assert not exists (select 1 from public.notifications where kind = 'time_off_removed'), 'no "removed" note for your own cancel';
+end $$;
+-- An admin deleting someone's day off tells them.
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+delete from public.time_off where id = '00000000-0000-0000-0000-0000000007b2';
+reset role;
+do $$ begin
+  assert (select count(*) from public.notifications where kind = 'time_off_removed'
+          and user_id = '00000000-0000-0000-0000-0000000000b2') = 1, 'owner hears an admin removed it';
+end $$;
+rollback;
+
 \echo 'All permission checks passed.'

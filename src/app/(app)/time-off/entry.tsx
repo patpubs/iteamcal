@@ -86,8 +86,8 @@ function EntryForm({
     const ok = await confirmAction(
       'Delete this time off?',
       `${name ?? 'Their'} ${rangeText(existing)} is removed from the schedule.${
-        existing.request_id ? ' The original request stays in the history as approved.' : ''
-      }`,
+        existing.request_id ? ' The original request shows as cancelled.' : ''
+      } If it hasn’t passed, they get a notification.`,
       'Delete',
     );
     if (!ok) return;

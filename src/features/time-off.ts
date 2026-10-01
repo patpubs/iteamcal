@@ -142,6 +142,18 @@ export function useCancelRequest() {
   });
 }
 
+/** Staff cancel their own upcoming day off (days already past stay on record). */
+export function useCancelTimeOff() {
+  const refresh = useRefresh();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc('cancel_time_off', { p_id: id });
+      if (error) throw error;
+    },
+    onSettled: refresh,
+  });
+}
+
 export function useDecideRequest() {
   const refresh = useRefresh();
   return useMutation({

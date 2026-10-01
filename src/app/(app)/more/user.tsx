@@ -1,4 +1,4 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -17,7 +17,7 @@ import {
   SwitchRow,
 } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
-import { displayName, useCrew, useProfiles, useUpdateProfile } from '@/features/team';
+import { displayName, useCrew, useProfiles, useRemoveAccount, useUpdateProfile } from '@/features/team';
 import { useTheme } from '@/hooks/use-theme';
 import { confirmAction, errorMessage } from '@/lib/confirm';
 import { useAuth } from '@/providers/auth';
@@ -29,6 +29,7 @@ export default function UserScreen() {
   const profiles = useProfiles();
   const crew = useCrew();
   const update = useUpdateProfile();
+  const removeAccount = useRemoveAccount();
   const [error, setError] = useState<string | null>(null);
   const [choosingCrew, setChoosingCrew] = useState(false);
 
@@ -147,6 +148,28 @@ export default function UserScreen() {
             <Button label="Approve access" loading={update.isPending} onPress={() => apply({ approval: 'approved' })} />
           </>
         )}
+        {user.approval !== 'approved' ? (
+          <Button
+            label="Remove account"
+            variant="danger"
+            loading={removeAccount.isPending}
+            onPress={async () => {
+              const ok = await confirmAction(
+                `Remove ${name}?`,
+                'Their sign-up is deleted and they leave this list. If they sign in again, they’ll show up as a new request.',
+                'Remove',
+              );
+              if (!ok) return;
+              setError(null);
+              try {
+                await removeAccount.mutateAsync(user.id);
+                router.back();
+              } catch (e) {
+                setError(errorMessage(e));
+              }
+            }}
+          />
+        ) : null}
       </Card>
 
       {user.approval === 'approved' ? (

@@ -99,6 +99,22 @@ export function useUpdateProfile() {
   });
 }
 
+/** Admins remove an account that was never approved or was turned away. */
+export function useRemoveAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.functions.invoke('remove-account', { body: { id } });
+      if (error) {
+        // The function answers with {"error": "..."} that people can act on.
+        const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+        throw new Error(body?.error ?? 'Couldn’t remove the account. Try again.');
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['profiles'] }),
+  });
+}
+
 export function useSaveCrew() {
   const queryClient = useQueryClient();
   return useMutation({

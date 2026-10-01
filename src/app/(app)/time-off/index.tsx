@@ -27,6 +27,7 @@ import {
   type TimeOff,
   type TimeOffRequest,
   useCancelRequest,
+  useCancelTimeOff,
   useDecideRequest,
   useRequests,
   useTimeOffEntries,
@@ -55,6 +56,7 @@ function MyTimeOff() {
   // Upcoming: anything still running today through the next year.
   const entries = useTimeOffEntries(now, addDays(now, 366));
   const cancel = useCancelRequest();
+  const cancelDay = useCancelTimeOff();
   const [error, setError] = useState<string | null>(null);
 
   if (!profile?.crew_id) {
@@ -76,6 +78,24 @@ function MyTimeOff() {
     setError(null);
     try {
       await cancel.mutateAsync(r.id);
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  }
+
+  async function onCancelDay(t: TimeOff) {
+    const started = t.start_date < now;
+    const ok = await confirmAction(
+      'Cancel this day off?',
+      started
+        ? `${rangeText(t)}. The days before today stay on record. Your manager will be told.`
+        : `${rangeText(t)}. Your manager will be told.`,
+      'Cancel day off',
+    );
+    if (!ok) return;
+    setError(null);
+    try {
+      await cancelDay.mutateAsync(t.id);
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -126,7 +146,21 @@ function MyTimeOff() {
             entries.data.map((t, i) => (
               <View key={t.id}>
                 {i > 0 ? <Divider /> : null}
-                <ListRow title={rangeText(t)} subtitle={t.reason} trailing={<TypeBadge type={t.type} />} />
+                <View style={{ paddingVertical: Spacing.sm, gap: Spacing.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                    <AppText variant="label" style={{ flex: 1 }}>
+                      {rangeText(t)}
+                    </AppText>
+                    <TypeBadge type={t.type} />
+                  </View>
+                  {t.reason ? <AppText muted>{t.reason}</AppText> : null}
+                  <Button
+                    label="Cancel day off"
+                    variant="secondary"
+                    onPress={() => onCancelDay(t)}
+                    disabled={cancelDay.isPending}
+                  />
+                </View>
               </View>
             ))
           ) : (
@@ -161,6 +195,7 @@ function MyTimeOff() {
 function StatusBadge({ status }: { status: TimeOffRequest['status'] }) {
   if (status === 'approved') return <Badge label="Approved" tone="primary" />;
   if (status === 'declined') return <Badge label="Declined" tone="danger" />;
+  if (status === 'cancelled') return <Badge label="Cancelled" />;
   return <Badge label="Waiting" tone="accent" />;
 }
 

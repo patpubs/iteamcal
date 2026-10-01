@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router/js-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/ui';
 import { useNotificationsRealtime, useUnreadCount } from '@/features/notifications';
@@ -15,6 +16,7 @@ export default function AppTabsLayout() {
   const theme = useTheme();
   const { isAdmin } = useAuth();
   const desktop = useIsDesktop();
+  const insets = useSafeAreaInsets();
   // Crew set to not need timecards don't see the tab (PRD §10); admins keep it for the crew view.
   const hideTimecards = useTimecardsHidden() === true && !isAdmin;
   const unread = useUnreadCount();
@@ -33,8 +35,13 @@ export default function AppTabsLayout() {
         tabBarPosition: desktop ? 'left' : 'bottom',
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textMuted,
-        tabBarStyle: { backgroundColor: theme.surface, borderTopColor: theme.border },
-        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+        // The default 49pt bar clips the labels on iPhone home screen apps, so
+        // give the icon and label a little more room above the home indicator.
+        tabBarStyle: desktop
+          ? { backgroundColor: theme.surface, borderTopColor: theme.border }
+          : { backgroundColor: theme.surface, borderTopColor: theme.border, height: 60 + insets.bottom },
+        tabBarItemStyle: desktop ? undefined : { paddingTop: 6, paddingBottom: 4 },
+        tabBarLabelStyle: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
       }}>
       <Tabs.Screen
         name="(schedule)"
