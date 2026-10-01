@@ -117,3 +117,45 @@ export function moveId(ids: string[], id: string, delta: -1 | 1) {
   [next[i], next[j]] = [next[j], next[i]];
   return next;
 }
+
+const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+const clock = (mins: number) =>
+  `${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
+
+/**
+ * The error for an end that isn't after the start, with the likely fix when
+ * AM and PM look swapped (9:00 PM – 12:00 PM was meant as 9:00 AM – 12:00 PM).
+ */
+export function endBeforeStartMessage(start: string, end: string) {
+  const s = minutes(start);
+  const e = minutes(end);
+  if (s === e) return 'End must be after the start.';
+  const fixes = [s >= 12 * 60 ? [s - 12 * 60, e] : null, e < 12 * 60 ? [s, e + 12 * 60] : null].filter(
+    (f): f is number[] => !!f && f[1] > f[0] && f[1] - f[0] <= 14 * 60,
+  );
+  if (fixes.length !== 1) return 'End must be after the start.';
+  const [fs, fe] = fixes[0];
+  return `End must be after the start. Did you mean ${formatTimeRange(clock(fs), clock(fe))}?`;
+}
+
+/**
+ * Times that are allowed but probably a typo, as short phrases ("starts at
+ * 9:00 PM"). Empty when nothing looks off.
+ */
+export function unusualTimes(start: string | null, end: string | null) {
+  const found: string[] = [];
+  if (start && (start < '05:00' || start >= '21:00')) found.push(`starts at ${formatTime(start)}`);
+  if (end && end > '22:00') found.push(`ends at ${formatTime(end)}`);
+  if (start && end && end > start) {
+    const length = minutes(end) - minutes(start);
+    if (length > 12 * 60) found.push(`is ${Math.round(length / 6) / 10} hours long`);
+    else if (length < 30) found.push(`is only ${length} minutes long`);
+  }
+  return found;
+}
+
+/** "This shift starts at 9:00 PM and is 13 hours long." */
+export function unusualSentence(what: string, found: string[]) {
+  const list = found.length > 1 ? `${found.slice(0, -1).join(', ')} and ${found.at(-1)}` : found[0];
+  return `${what} ${list}. Save it anyway?`;
+}

@@ -30,7 +30,14 @@ import { type Crew, useCrew } from '@/features/team';
 import { useTheme } from '@/hooks/use-theme';
 import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
 import { addDays, isDay, longDay, shortDay, shortWeekday, today } from '@/lib/dates';
-import { parseTime, shiftConflicts, shiftTimeLabel } from '@/lib/schedule';
+import {
+  endBeforeStartMessage,
+  parseTime,
+  shiftConflicts,
+  shiftTimeLabel,
+  unusualSentence,
+  unusualTimes,
+} from '@/lib/schedule';
 import { formatTime } from '@/lib/time-format';
 
 export default function ShiftScreen() {
@@ -115,7 +122,7 @@ function ShiftForm({
     if (!validDate) next.date = 'Pick a day.';
     if (startTime === undefined) next.start = 'Try a time like 8:00 AM or 14:30.';
     if (endTime === undefined) next.end = 'Try a time like 4:30 PM or 16:30.';
-    if (startTime && endTime && endTime <= startTime) next.end = 'End must be after the start.';
+    if (startTime && endTime && endTime <= startTime) next.end = endBeforeStartMessage(startTime, endTime);
     setErrors(next);
     if (Object.values(next).some(Boolean)) return null;
     return {
@@ -131,6 +138,9 @@ function ShiftForm({
     const values = validate();
     if (!values) return;
     if (movingOntoTimeOff) return;
+    const odd = unusualTimes(values.start_time, values.end_time);
+    if (odd.length && !(await confirmAction('Double-check the times', unusualSentence('This shift', odd), 'Save')))
+      return;
     if (moving && destShifts.length && !askMove) {
       setAskMove(true);
       return;

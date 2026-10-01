@@ -1,6 +1,16 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { moveId, parseTime, shiftConflicts, shiftTimeLabel, sortShifts, visibleWeekDays } from './schedule';
+import {
+  endBeforeStartMessage,
+  moveId,
+  parseTime,
+  shiftConflicts,
+  shiftTimeLabel,
+  sortShifts,
+  unusualSentence,
+  unusualTimes,
+  visibleWeekDays,
+} from './schedule';
 
 const shift = (id: string, day: string, start: string | null = null, crew = 'a') => ({
   id,
@@ -70,5 +80,28 @@ describe('schedule rules', () => {
   it('moves crew up and down', () => {
     expect(moveId(['a', 'b', 'c'], 'c', -1)).toEqual(['a', 'c', 'b']);
     expect(moveId(['a', 'b', 'c'], 'a', -1)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('time typo checks', () => {
+  it('suggests the AM/PM fix when the end is before the start', () => {
+    expect(endBeforeStartMessage('21:00', '12:00')).toBe(
+      'End must be after the start. Did you mean 9:00 AM – 12:00 PM?',
+    );
+    expect(endBeforeStartMessage('09:00', '05:00')).toBe(
+      'End must be after the start. Did you mean 9:00 AM – 5:00 PM?',
+    );
+    expect(endBeforeStartMessage('10:00', '10:00')).toBe('End must be after the start.');
+  });
+
+  it('flags late, early, long, and very short times', () => {
+    expect(unusualTimes('09:00', '17:00')).toEqual([]);
+    expect(unusualTimes('21:00', '23:30')).toEqual(['starts at 9:00 PM', 'ends at 11:30 PM']);
+    expect(unusualTimes('04:30', null)).toEqual(['starts at 4:30 AM']);
+    expect(unusualTimes('06:00', '19:30')).toEqual(['is 13.5 hours long']);
+    expect(unusualTimes('09:00', '09:15')).toEqual(['is only 15 minutes long']);
+    expect(unusualSentence('This shift', ['starts at 9:00 PM', 'ends at 11:30 PM'])).toBe(
+      'This shift starts at 9:00 PM and ends at 11:30 PM. Save it anyway?',
+    );
   });
 });

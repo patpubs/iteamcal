@@ -9,6 +9,7 @@ import { type Timecard, useDeleteTimecard, useSaveTimecard, useTimecard } from '
 import { useTheme } from '@/hooks/use-theme';
 import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
 import { isDay, longDay, today } from '@/lib/dates';
+import { unusualSentence, unusualTimes } from '@/lib/schedule';
 import { formatTime } from '@/lib/time-format';
 import { type CardErrors, type CardInput, formatHours, netHours, readCard } from '@/lib/timecards';
 import { useAuth } from '@/providers/auth';
@@ -80,6 +81,9 @@ function EntryForm({
     const { values, errors: next } = readCard(input);
     setErrors(next);
     if (!values) return;
+    const odd = unusualTimes(values.start_time, values.end_time);
+    if (odd.length && !(await confirmAction('Double-check the times', unusualSentence('This timecard', odd), 'Save')))
+      return;
     setError(null);
     try {
       await save.mutateAsync({ id: existing?.id, userId, workDate: date, times: values });
