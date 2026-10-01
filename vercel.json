@@ -12,8 +12,26 @@
   ],
   "headers": [
     {
+      "source": "/((?!_expo/).*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
       "source": "/sw.js",
       "headers": [
+    {
+      "source": "/((?!_expo/).*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
         {
           "key": "Cache-Control",
           "value": "no-cache"

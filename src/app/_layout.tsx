@@ -7,9 +7,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Loading } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { watchForUpdates } from '@/lib/app-update';
 import { AuthProvider, useAuth } from '@/providers/auth';
 
 SplashScreen.preventAutoHideAsync();
+watchForUpdates();
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
