@@ -35,13 +35,13 @@ export default function AppTabsLayout() {
         tabBarPosition: desktop ? 'left' : 'bottom',
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textMuted,
-        // The default 49pt bar clips the labels on iPhone home screen apps, so
-        // give the icon and label a little more room above the home indicator.
+        // The icon (28) and label (16) need 54pt with the tab's own padding.
+        // Anything less squeezes the label, and iPhone cuts off its bottom.
         tabBarStyle: desktop
           ? { backgroundColor: theme.surface, borderTopColor: theme.border }
-          : { backgroundColor: theme.surface, borderTopColor: theme.border, height: 60 + insets.bottom },
-        tabBarItemStyle: desktop ? undefined : { paddingTop: 6, paddingBottom: 4 },
-        tabBarLabelStyle: { fontSize: 12, lineHeight: 16, fontWeight: '600' },
+          : { backgroundColor: theme.surface, borderTopColor: theme.border, height: 64 + insets.bottom },
+        tabBarItemStyle: desktop ? undefined : { paddingTop: 4, paddingBottom: 2 },
+        tabBarLabelStyle: { fontSize: 12, lineHeight: 16, fontWeight: '600', flexShrink: 0 },
       }}>
       <Tabs.Screen
         name="(schedule)"
