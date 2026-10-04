@@ -196,19 +196,27 @@ export function WeekTotal({ cards }: { cards: Timecard[] }) {
  * One person in the admin's crew week: their total and a cell per day.
  * Seven cells fit a 390px phone, so there's no sideways scrolling.
  */
+export type DayCard = Pick<Timecard, 'work_date' | 'end_time' | 'net_hours'> & { id?: string };
+
+/**
+ * One person's week as day tiles. Without a userId the week is read-only, for
+ * old-app cards of crew who never signed in, with a note saying so.
+ */
 export function CrewWeekCard({
   name,
   color,
   userId,
+  note,
   days,
   cards,
   now,
 }: {
   name: string;
   color?: string;
-  userId: string;
+  userId?: string;
+  note?: string;
   days: string[];
-  cards: Timecard[];
+  cards: DayCard[];
   now: string;
 }) {
   const theme = useTheme();
@@ -222,6 +230,11 @@ export function CrewWeekCard({
         </AppText>
         <AppText variant="label">{formatHours(totalHours(cards))}</AppText>
       </View>
+      {note ? (
+        <AppText variant="caption" muted>
+          {note}
+        </AppText>
+      ) : null}
       <View style={{ flexDirection: 'row', gap: 4 }}>
         {days.map((day) => {
           const card = byDay.get(day);
@@ -233,11 +246,11 @@ export function CrewWeekCard({
               key={day}
               accessibilityRole="button"
               accessibilityLabel={`${name}, ${longDay(day)}: ${card ? text : 'no entry'}`}
-              disabled={future && !card}
+              disabled={!userId || (future && !card)}
               onPress={() =>
                 router.push({
                   pathname: '/timecards/entry',
-                  params: card ? { id: card.id } : { user: userId, date: day },
+                  params: card?.id ? { id: card.id } : { user: userId, date: day },
                 })
               }
               style={({ pressed }) => ({
@@ -246,7 +259,7 @@ export function CrewWeekCard({
                 paddingVertical: 6,
                 borderRadius: Radius.sm,
                 backgroundColor: open ? theme.accentSoft : card ? theme.primarySoft : theme.surfaceMuted,
-                opacity: pressed ? 0.7 : future && !card ? 0.5 : 1,
+                opacity: pressed && userId ? 0.7 : future && !card ? 0.5 : 1,
               })}>
               <AppText variant="caption" muted>
                 {shortWeekday(day).slice(0, 2)}

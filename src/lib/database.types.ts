@@ -361,6 +361,18 @@ export type Database = {
       duplicate_shift: { Args: { p_shift_id: string; p_dates: string[] }; Returns: number };
       copy_week: { Args: { p_from: string; p_to: string }; Returns: { batch_id: string; copied: number }[] };
       undo_copy_week: { Args: { p_batch_id: string }; Returns: number };
+      old_timecards: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          crew_id: string;
+          work_date: string;
+          start_time: string;
+          lunch_start: string | null;
+          lunch_end: string | null;
+          end_time: string | null;
+          net_hours: number | null;
+        }[];
+      };
       punch: {
         Args: { p_action: 'clock_in' | 'lunch_start' | 'lunch_end' | 'clock_out' };
         Returns: Database['public']['Tables']['timecards']['Row'];

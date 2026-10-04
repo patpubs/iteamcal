@@ -27,6 +27,23 @@ export function useTimecards(from: string, to: string, userId?: string) {
   });
 }
 
+/**
+ * Admins only: old-app cards for crew who never signed in to this app (someone
+ * who left, or hasn't joined yet). Read-only; they move onto the account if
+ * that person signs in.
+ */
+export function useOldTimecards(from: string, to: string, enabled = true) {
+  return useQuery({
+    queryKey: ['timecards', 'old', from, to],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('old_timecards', { p_from: from, p_to: to });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useTimecard(id: string | undefined) {
   return useQuery({
     queryKey: ['timecards', 'one', id],

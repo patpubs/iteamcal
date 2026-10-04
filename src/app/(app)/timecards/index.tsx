@@ -2,12 +2,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 
-import { CrewWeekCard, TodayCard, WeekList, WeekNav, WeekTotal } from '@/components/timecards/parts';
+import { CrewWeekCard, type DayCard, TodayCard, WeekList, WeekNav, WeekTotal } from '@/components/timecards/parts';
 import { AppText, Card, Columns, ErrorText, Loading, PageHeader, Screen, Segmented } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { displayName, useCrew, useProfiles } from '@/features/team';
 import {
   type PunchAction,
+  useOldTimecards,
   usePunch,
   useTimecards,
   useTimecardsHidden,
@@ -123,37 +124,47 @@ function MyWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: (w
 
 /**
  * Admin view of everyone's week (PRD §10): approved accounts, including
- * people with no entries, minus crew set to not need timecards. Sorted by
- * name rather than schedule order.
+ * people with no entries, minus crew set to not need timecards, plus old-app
+ * cards for crew who never signed in. Sorted by name rather than schedule order.
  */
 function CrewWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: (week: string) => void }) {
   const profiles = useProfiles();
   const crew = useCrew();
   const cards = useTimecards(days[0], days[6]);
+  const oldCards = useOldTimecards(days[0], days[6]);
   const desktop = useIsDesktop();
 
   const people = useMemo(() => {
-    if (!profiles.data || !crew.data) return null;
+    if (!profiles.data || !crew.data || !cards.data || !oldCards.data) return null;
     const crewById = new Map(crew.data.map((c) => [c.id, c]));
-    return profiles.data
+    const withAccount = profiles.data
       .filter((p) => p.approval === 'approved' && !(p.crew_id && crewById.get(p.crew_id)?.hide_timecards))
       .map((p) => ({
-        id: p.id,
+        key: p.id,
+        userId: p.id as string | undefined,
         name: displayName(p, crew.data),
         color: p.crew_id ? crewById.get(p.crew_id)?.color : undefined,
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [profiles.data, crew.data]);
+        cards: cards.data.filter((c) => c.user_id === p.id) as DayCard[],
+      }));
+    // Crew who never signed in still show their old-app cards for that week.
+    const withoutAccount = [...new Set(oldCards.data.map((c) => c.crew_id))].map((crewId) => ({
+      key: crewId,
+      userId: undefined,
+      name: crewById.get(crewId)?.name ?? 'Former crew',
+      color: crewById.get(crewId)?.color,
+      cards: oldCards.data.filter((c) => c.crew_id === crewId) as DayCard[],
+    }));
+    return [...withAccount, ...withoutAccount].sort((a, b) => a.name.localeCompare(b.name));
+  }, [profiles.data, crew.data, cards.data, oldCards.data]);
 
-  const error = profiles.error ?? crew.error ?? cards.error;
-  const shown = new Set(people?.map((p) => p.id));
-  const shownCards = (cards.data ?? []).filter((c) => shown.has(c.user_id));
+  const error = profiles.error ?? crew.error ?? cards.error ?? oldCards.error;
+  const shownCards = (people ?? []).flatMap((p) => p.cards);
 
   return (
     <>
       <WeekNav days={days} now={now} onGo={onWeek} />
       <ErrorText>{error ? errorMessage(error) : null}</ErrorText>
-      {!people || !cards.data ? (
+      {!people ? (
         <Loading />
       ) : (
         <>
@@ -174,14 +185,14 @@ function CrewWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: 
                 flexWrap: desktop ? 'wrap' : 'nowrap',
               }}>
               {people.map((p) => (
-                <View key={p.id} style={desktop ? { width: '48.5%' } : undefined}>
+                <View key={p.key} style={desktop ? { width: '48.5%' } : undefined}>
                   <CrewWeekCard
-                    key={p.id}
                     name={p.name}
                     color={p.color}
-                    userId={p.id}
+                    userId={p.userId}
+                    note={p.userId ? undefined : 'No account in this app. Cards from the old app, view only.'}
                     days={days}
-                    cards={shownCards.filter((c) => c.user_id === p.id)}
+                    cards={p.cards}
                     now={now}
                   />
                 </View>

@@ -380,6 +380,21 @@ do $$ begin
   assert (select count(*) from public.notifications where user_id = '00000000-0000-0000-0000-0000000000f1') = 0,
     'moving old cards sends no notifications';
 end $$;
+-- Admins can read the cards still staged for crew who never signed in; staff can't.
+insert into public.account_invites (email, role, approval, crew_id, legacy_user_id) values
+  ('leftcompany@example.com', 'staff', 'approved', '00000000-0000-0000-0000-00000000c0f2', 'L3');
+insert into public.legacy_timecards (legacy_user_id, work_date, start_time, end_time, lunch_start, lunch_end) values
+  ('L3', '2026-08-05', '09:00', '17:30', '12:00', '12:30');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
+select pg_temp.expect_error($q$ select * from public.old_timecards('2026-08-01', '2026-08-09') $q$, 'staff reading old cards');
+select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
+do $$ begin
+  assert (select count(*) from public.old_timecards('2026-08-01', '2026-08-09')) = 1,
+    'admins see staged cards only for crew who never signed in';
+  assert (select net_hours from public.old_timecards('2026-08-05', '2026-08-05')) = 8.00,
+    'old cards come with hours';
+end $$;
+reset role;
 rollback;
 
 -- Email bookkeeping belongs to the server, not the app.
