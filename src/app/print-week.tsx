@@ -7,7 +7,7 @@ import { Paper, PrintFrame, PrintText } from '@/components/print-frame';
 import { useScheduleRange } from '@/features/schedule';
 import { useCrew } from '@/features/team';
 import { addDays, isDay, rangeLabel, shortDay, shortWeekday, today, weekDays } from '@/lib/dates';
-import { shiftTimeLabel, sortShifts, timeOffLabel, timeOffOn, visibleWeekDays } from '@/lib/schedule';
+import { shiftTimeLabel, sortShifts, timeOffOn, timeOffText, visibleWeekDays } from '@/lib/schedule';
 import { useTimeFormat } from '@/lib/time-format';
 
 /**
@@ -72,7 +72,7 @@ export default function PrintWeekScreen() {
               <View key={d} style={[border, { flex: 1, padding: 6, gap: 4 }]}>
                 {off ? (
                   <View style={{ backgroundColor: Paper.accentSoft, borderRadius: 4, paddingHorizontal: 4 }}>
-                    <PrintText size={11}>{timeOffLabel(off.type)}</PrintText>
+                    <PrintText size={11}>{timeOffText(off)}</PrintText>
                   </View>
                 ) : null}
                 {dayShifts.map((s) => (

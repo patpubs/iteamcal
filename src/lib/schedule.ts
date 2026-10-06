@@ -16,6 +16,9 @@ export type TimeOffLike = {
   start_date: string;
   end_date: string;
   type: 'vacation' | 'sick' | 'personal' | 'other' | null;
+  /** Part of a day off; both null (or missing) for whole days. */
+  start_time?: string | null;
+  end_time?: string | null;
 };
 
 export type HolidayLike = { holiday_date: string; name: string };
@@ -53,13 +56,48 @@ export function visibleWeekDays(
 
 export type Conflict = { kind: 'holiday'; label: string } | { kind: 'time-off'; label: string; sick: boolean };
 
+/**
+ * Whether time off overlaps a shift's hours, matching the database's
+ * off_overlaps(). Whole days always do; a shift without times counts as the
+ * whole day.
+ */
+export function offOverlapsShift(
+  off: Pick<TimeOffLike, 'start_time' | 'end_time'>,
+  shift: Pick<ShiftLike, 'start_time' | 'end_time'>,
+) {
+  if (!off.start_time || !off.end_time) return true;
+  const offStart = off.start_time.slice(0, 5);
+  const offEnd = off.end_time.slice(0, 5);
+  return offStart < (shift.end_time?.slice(0, 5) ?? '24:00') && offEnd > (shift.start_time?.slice(0, 5) ?? '00:00');
+}
+
+/** Time off for this person and day that overlaps the shift's hours, if any. */
+export function timeOffDuring<T extends TimeOffLike>(timeOff: T[], shift: ShiftLike) {
+  return timeOff.find(
+    (t) =>
+      t.crew_id === shift.crew_id &&
+      t.start_date <= shift.shift_date &&
+      t.end_date >= shift.shift_date &&
+      offOverlapsShift(t, shift),
+  );
+}
+
 export function shiftConflicts(shift: ShiftLike, timeOff: TimeOffLike[], holidays: HolidayLike[]): Conflict[] {
   const out: Conflict[] = [];
   const holiday = holidays.find((h) => h.holiday_date === shift.shift_date);
   if (holiday) out.push({ kind: 'holiday', label: `${holiday.name}, office closed` });
-  const off = timeOffOn(timeOff, shift.crew_id, shift.shift_date);
-  if (off) out.push({ kind: 'time-off', label: `${timeOffLabel(off.type)} this day`, sick: off.type === 'sick' });
+  const off = timeOffDuring(timeOff, shift);
+  if (off) {
+    const when = off.start_time && off.end_time ? ` ${formatTimeRange(off.start_time, off.end_time)}` : ' this day';
+    out.push({ kind: 'time-off', label: `${timeOffLabel(off.type)}${when}`, sick: off.type === 'sick' });
+  }
   return out;
+}
+
+/** "Vacation", or "Personal day · 12:00 PM – 5:00 PM" for part of a day. */
+export function timeOffText(off: Pick<TimeOffLike, 'type' | 'start_time' | 'end_time'>) {
+  const label = timeOffLabel(off.type);
+  return off.start_time && off.end_time ? `${label} · ${formatTimeRange(off.start_time, off.end_time)}` : label;
 }
 
 export function timeOffLabel(type: TimeOffLike['type']) {
@@ -92,6 +130,7 @@ export function shiftTimeLabel(shift: Pick<ShiftLike, 'start_time' | 'end_time'>
 export function parseTime(input: string): string | null | undefined {
   const raw = input.trim().toLowerCase().replace(/\s+/g, '').replace(/\./g, '');
   if (!raw) return null;
+  if (raw === 'noon') return '12:00';
   const match = /^(\d{1,2})(?::?(\d{2}))?(a|am|p|pm)?$/.exec(raw);
   if (!match) return undefined;
   let hour = Number(match[1]);

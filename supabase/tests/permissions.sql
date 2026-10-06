@@ -124,6 +124,11 @@ select pg_temp.expect_error($q$ select public.decide_time_off_request('00000000-
 insert into public.time_off_requests (id, requester_id, crew_id, start_date, end_date, type)
   values ('00000000-0000-0000-0000-0000000000f2', auth.uid(), '00000000-0000-0000-0000-00000000c001', '2026-11-01', '2026-11-01', 'personal');
 delete from public.time_off_requests where id = '00000000-0000-0000-0000-0000000000f2';
+-- Part of a day: one day with from/until times.
+insert into public.time_off_requests (id, requester_id, crew_id, start_date, end_date, start_time, end_time, type)
+  values ('00000000-0000-0000-0000-0000000000f3', auth.uid(), '00000000-0000-0000-0000-00000000c001',
+          '2026-11-02', '2026-11-02', '13:00', '17:00', 'personal');
+select pg_temp.expect_error($q$ insert into public.time_off_requests (requester_id, crew_id, start_date, end_date, start_time, end_time, type) values (auth.uid(), '00000000-0000-0000-0000-00000000c001', '2026-11-02', '2026-11-02', '17:00', '13:00', 'personal') $q$, 'part-day request ending before it starts');
 commit;
 
 begin;
@@ -135,7 +140,11 @@ begin;
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1');
 select public.decide_time_off_request('00000000-0000-0000-0000-0000000000f1', true, 'Feel better');
 select pg_temp.expect_error($q$ select public.decide_time_off_request('00000000-0000-0000-0000-0000000000f1', false) $q$, 'deciding twice');
+select public.decide_time_off_request('00000000-0000-0000-0000-0000000000f3', true);
 do $$ begin
+  assert (select start_time::text || '-' || end_time::text from public.time_off
+          where request_id = '00000000-0000-0000-0000-0000000000f3') = '13:00:00-17:00:00',
+    'approval keeps the hours';
   assert (select count(*) from public.time_off where request_id = '00000000-0000-0000-0000-0000000000f1') = 1,
     'approval should create exactly one absence';
   assert (select count(*) from public.time_off_requests where id = '00000000-0000-0000-0000-0000000000f2') = 0,
@@ -146,9 +155,12 @@ commit;
 begin;
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
 do $$ begin
-  assert (select count(*) from public.notifications where kind = 'request_decided') = 1, 'requester should be notified';
-  assert (select body from public.notifications where kind = 'request_decided') like '%Feel better%', 'note should reach requester';
+  assert (select count(*) from public.notifications where kind = 'request_decided') = 2, 'requester should be notified';
+  assert exists (select 1 from public.notifications where kind = 'request_decided' and body like '%Feel better%'), 'note should reach requester';
+  assert exists (select 1 from public.notifications where kind = 'request_decided'
+                 and body = 'Your personal request for Mon Nov 2, 1:00 PM – 5:00 PM was approved.'), 'part-day note names the hours';
   assert (select type from public.time_off_in_range('2026-10-01', '2026-10-31')) = 'sick', 'own time off shows type';
+  assert (select start_time from public.time_off_hours_in_range('2026-11-02', '2026-11-02')) = '13:00', 'schedule gets the hours';
 end $$;
 do $$ declare n int; begin
   delete from public.time_off_requests where id = '00000000-0000-0000-0000-0000000000f1';
@@ -501,6 +513,33 @@ insert into public.shifts (crew_id, shift_date, start_time, end_time)
 do $$ begin
   assert public.send_reminders('2026-08-04 09:30 America/Chicago') = 0, 'no reminder on a day off';
 end $$;
+-- Part-day time off: Lee is off until noon, Sam leaves at 1 PM.
+insert into public.time_off (crew_id, start_date, end_date, start_time, end_time, type) values
+  ('00000000-0000-0000-0000-00000000c002', '2026-08-05', '2026-08-05', '09:00', '12:00', 'personal'),
+  ('00000000-0000-0000-0000-00000000c001', '2026-08-05', '2026-08-05', '13:00', '17:00', 'personal');
+insert into public.shifts (crew_id, shift_date, start_time, end_time) values
+  ('00000000-0000-0000-0000-00000000c002', '2026-08-05', '09:00', '15:00'),
+  ('00000000-0000-0000-0000-00000000c001', '2026-08-05', '09:00', '17:00');
+insert into public.timecards (user_id, work_date, start_time)
+  values ('00000000-0000-0000-0000-0000000000b1', '2026-08-05', '09:00');
+do $$ begin
+  assert public.send_reminders('2026-08-05 09:30 America/Chicago') = 0, 'part-day off covering the start waits';
+  assert public.send_reminders('2026-08-05 12:15 America/Chicago') = 1, 'due once the part-day off ends';
+  assert exists (select 1 from public.notifications where kind = 'clock_in_reminder'
+                 and user_id = '00000000-0000-0000-0000-0000000000b2'
+                 and body like 'Your shift started at 12:00 PM.%'), 'reminder names when they were due';
+  assert public.send_reminders('2026-08-05 13:15 America/Chicago') = 1, 'leaving early gets a clock-out reminder then';
+  assert exists (select 1 from public.notifications where kind = 'clock_out_reminder'
+                 and user_id = '00000000-0000-0000-0000-0000000000b1'
+                 and body like 'Your shift ended at 1:00 PM.%'), 'clock-out reminder uses the time they left';
+  begin
+    insert into public.time_off (crew_id, start_date, end_date, start_time, end_time, type)
+      values ('00000000-0000-0000-0000-00000000c001', '2026-08-10', '2026-08-11', '09:00', '12:00', 'personal');
+    raise exception 'part-day time off over two days should be refused';
+  exception when check_violation then null;
+  end;
+end $$;
+delete from public.timecards where work_date = '2026-08-05';
 -- Sunday Aug 9 at 6 PM: weekly review for everyone who worked or was scheduled.
 update public.timecards set end_time = '17:00'
   where user_id = '00000000-0000-0000-0000-0000000000b1' and work_date = '2026-08-03';

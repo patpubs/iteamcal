@@ -4,7 +4,7 @@ import { AppText } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import type { Shift, TimeOffEntry } from '@/features/schedule';
 import { useTheme } from '@/hooks/use-theme';
-import { type Conflict, shiftTimeLabel, timeOffLabel } from '@/lib/schedule';
+import { type Conflict, shiftTimeLabel, timeOffText } from '@/lib/schedule';
 import { useTimeFormat } from '@/lib/time-format';
 
 /** One shift: crew color bar, times, notes, and any conflict. */
@@ -92,7 +92,7 @@ export function ShiftChip({
 export function TimeOffChip({ entry, title }: { entry: TimeOffEntry; title?: string }) {
   const theme = useTheme();
   const sick = entry.type === 'sick';
-  const label = timeOffLabel(entry.type);
+  const label = timeOffText(entry);
   return (
     <View
       accessibilityLabel={`${title ? `${title}, ` : ''}${label}`}

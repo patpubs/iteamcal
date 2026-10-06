@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { coverageFor, dayCount, pickRange, rangeDays, rangeText } from './time-off';
+import { coverageFor, dayCount, pickRange, rangeDays, rangeText, readHours } from './time-off';
 
 describe('time off rules', () => {
   it('counts inclusive calendar days', () => {
@@ -45,5 +45,15 @@ describe('time off rules', () => {
       { crew_id: 'b', kind: 'off' },
       { crew_id: 'd', kind: 'pending' },
     ]);
+  });
+
+  it('describes and reads part of a day', () => {
+    expect(
+      rangeText({ start_date: '2026-10-05', end_date: '2026-10-05', start_time: '12:00:00', end_time: '17:00:00' }),
+    ).toBe('Oct 5 · 12:00 PM – 5:00 PM');
+    expect(readHours('lunch', '5pm').errors.from).toBe('Use a time like 12:00 PM.');
+    expect(readHours('12pm', '5pm')).toEqual({ values: { start_time: '12:00', end_time: '17:00' }, errors: {} });
+    expect(readHours('', '5pm').errors).toEqual({ from: 'Enter when time off starts.' });
+    expect(readHours('5pm', '12pm').values).toBeNull();
   });
 });

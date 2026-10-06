@@ -226,6 +226,8 @@ export type Database = {
           reason: string | null;
           request_id: string | null;
           start_date: string;
+          start_time: string | null;
+          end_time: string | null;
           type: Enums_['time_off_type'];
           updated_at: string;
         };
@@ -238,6 +240,8 @@ export type Database = {
           reason?: string | null;
           request_id?: string | null;
           start_date: string;
+          start_time?: string | null;
+          end_time?: string | null;
           type: Enums_['time_off_type'];
           updated_at?: string;
         };
@@ -256,6 +260,8 @@ export type Database = {
           reason: string | null;
           requester_id: string;
           start_date: string;
+          start_time: string | null;
+          end_time: string | null;
           status: Enums_['request_status'];
           type: Enums_['time_off_type'];
         };
@@ -270,6 +276,8 @@ export type Database = {
           reason?: string | null;
           requester_id: string;
           start_date: string;
+          start_time?: string | null;
+          end_time?: string | null;
           status?: Enums_['request_status'];
           type: Enums_['time_off_type'];
         };
@@ -386,6 +394,19 @@ export type Database = {
           p_mode?: 'merge' | 'replace';
         };
         Returns: undefined;
+      };
+      time_off_hours_in_range: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          crew_id: string;
+          end_date: string;
+          id: string;
+          reason: string | null;
+          start_date: string;
+          type: Enums_['time_off_type'] | null;
+          start_time: string | null;
+          end_time: string | null;
+        }[];
       };
       time_off_in_range: {
         Args: { p_from: string; p_to: string };

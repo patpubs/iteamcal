@@ -7,7 +7,7 @@ import { useDuplicateShift, useScheduleRange, useShift } from '@/features/schedu
 import { useCrew } from '@/features/team';
 import { errorMessage, goBack } from '@/lib/confirm';
 import { addMonths, longDay, monthGrid, shortDay } from '@/lib/dates';
-import { shiftTimeLabel, timeOffOn } from '@/lib/schedule';
+import { shiftTimeLabel, timeOffDuring } from '@/lib/schedule';
 
 /** Copies one shift onto days picked on a calendar (PRD §5). */
 export default function ShiftCopyScreen() {
@@ -38,7 +38,7 @@ export default function ShiftCopyScreen() {
 
   function reason(day: string) {
     if (day === src.shift_date) return 'the original shift';
-    if (timeOffOn(timeOff, src.crew_id, day)) return 'day off';
+    if (timeOffDuring(timeOff, { ...src, shift_date: day })) return 'day off';
     return null;
   }
 

@@ -13,6 +13,8 @@ export type TimeOffEntry = {
   end_date: string;
   type: Tables<'time_off'>['type'] | null;
   reason: string | null;
+  start_time: string | null;
+  end_time: string | null;
 };
 
 /** Shifts, time off, and holidays for an inclusive date range. */
@@ -34,7 +36,7 @@ export function useScheduleRange(from: string, to: string) {
   const timeOff = useQuery({
     queryKey: ['schedule', 'time-off', from, to],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('time_off_in_range', { p_from: from, p_to: to });
+      const { data, error } = await supabase.rpc('time_off_hours_in_range', { p_from: from, p_to: to });
       if (error) throw error;
       return data as TimeOffEntry[];
     },

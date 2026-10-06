@@ -105,7 +105,14 @@ function useRefresh() {
     ]);
 }
 
-type RequestValues = { start_date: string; end_date: string; type: TimeOffType; reason: string | null };
+type RequestValues = {
+  start_date: string;
+  end_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  type: TimeOffType;
+  reason: string | null;
+};
 
 export function useSubmitRequest() {
   const refresh = useRefresh();

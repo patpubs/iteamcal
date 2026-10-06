@@ -2,13 +2,20 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
-import { type RangeState, RangePicker, TypePicker } from '@/components/time-off/parts';
+import {
+  type PartDayState,
+  PartDayPicker,
+  type RangeState,
+  RangePicker,
+  TypePicker,
+} from '@/components/time-off/parts';
 import { AppText, Button, Card, Chip, ErrorText, Field, Loading, Screen, SectionTitle } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { type TimeOff, type TimeOffType, useDeleteTimeOff, useSaveTimeOff, useTimeOffEntry } from '@/features/time-off';
 import { type Crew, useCrew } from '@/features/team';
 import { confirmAction, errorMessage, goBack } from '@/lib/confirm';
-import { rangeText } from '@/lib/time-off';
+import { type HoursErrors, rangeText, readHours } from '@/lib/time-off';
+import { formatTime } from '@/lib/time-format';
 
 /** Admins record, edit, or delete a day-off range directly (PRD §7). */
 export default function EntryScreen() {
@@ -56,13 +63,23 @@ function EntryForm({
   });
   const [type, setType] = useState<TimeOffType>(existing?.type ?? 'vacation');
   const [reason, setReason] = useState(existing?.reason ?? '');
+  const [partDay, setPartDay] = useState<PartDayState>({
+    part: !!existing?.start_time,
+    from: existing?.start_time ? formatTime(existing.start_time) : '',
+    until: existing?.end_time ? formatTime(existing.end_time) : '',
+  });
+  const [hoursErrors, setHoursErrors] = useState<HoursErrors>({});
   const [error, setError] = useState<string | null>(null);
+  const oneDay = !!range.start && (range.end ?? range.start) === range.start;
   const busy = save.isPending || remove.isPending;
   const name = crew.find((c) => c.id === crewId)?.name;
 
   async function onSave() {
     if (!crewId) return setError('Choose who is off.');
     if (!range.start) return setError('Pick the days off.');
+    const hours = oneDay && partDay.part ? readHours(partDay.from, partDay.until) : null;
+    setHoursErrors(hours?.errors ?? {});
+    if (hours && !hours.values) return;
     setError(null);
     try {
       await save.mutateAsync({
@@ -71,6 +88,8 @@ function EntryForm({
           crew_id: crewId,
           start_date: range.start,
           end_date: range.end ?? range.start,
+          start_time: hours?.values?.start_time ?? null,
+          end_time: hours?.values?.end_time ?? null,
           type,
           reason: reason.trim() || null,
         },
@@ -111,6 +130,7 @@ function EntryForm({
       <SectionTitle>Days</SectionTitle>
       <Card>
         <RangePicker value={range} onChange={setRange} />
+        {oneDay ? <PartDayPicker value={partDay} onChange={setPartDay} errors={hoursErrors} /> : null}
       </Card>
       <SectionTitle>Type</SectionTitle>
       <TypePicker value={type} onChange={setType} />
@@ -123,7 +143,7 @@ function EntryForm({
         </AppText>
       ) : (
         <AppText variant="caption" muted>
-          Recording time off here skips the request step. Shifts on these days stay and show as conflicts.
+          Recording time off here skips the request step. Shifts during this time stay and show as conflicts.
         </AppText>
       )}
       <ErrorText>{error}</ErrorText>

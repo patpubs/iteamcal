@@ -16,7 +16,7 @@ import {
   shortWeekday,
   today,
 } from '@/lib/dates';
-import { timeOffLabel } from '@/lib/schedule';
+import { timeOffLabel, timeOffText } from '@/lib/schedule';
 import { rangeText } from '@/lib/time-off';
 import { useAuth } from '@/providers/auth';
 
@@ -140,7 +140,7 @@ export default function PrintTimeOffScreen() {
                             <View
                               key={t.id}
                               style={{ borderLeftWidth: 3, borderLeftColor: c?.color ?? Paper.border, paddingLeft: 3 }}>
-                              <PrintText size={10}>{`${c?.name ?? 'Former crew'} · ${timeOffLabel(t.type)}`}</PrintText>
+                              <PrintText size={10}>{`${c?.name ?? 'Former crew'} · ${timeOffText(t)}`}</PrintText>
                             </View>
                           );
                         })

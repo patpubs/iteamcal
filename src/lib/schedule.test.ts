@@ -7,6 +7,7 @@ import {
   shiftConflicts,
   shiftTimeLabel,
   sortShifts,
+  timeOffText,
   unusualSentence,
   unusualTimes,
   visibleWeekDays,
@@ -59,10 +60,32 @@ describe('schedule rules', () => {
     expect(shiftConflicts(shift('2', '2026-12-25', null, 'b'), [], [])).toEqual([]);
   });
 
+  it('only counts part-day time off that overlaps the shift', () => {
+    const off = [
+      {
+        crew_id: 'a',
+        start_date: '2026-10-05',
+        end_date: '2026-10-05',
+        type: 'personal' as const,
+        start_time: '12:00:00',
+        end_time: '17:00:00',
+      },
+    ];
+    const morning = { ...shift('m', '2026-10-05', '08:00'), end_time: '12:00' };
+    const allDay = { ...shift('d', '2026-10-05', '09:00'), end_time: '17:00' };
+    expect(shiftConflicts(morning, off, [])).toEqual([]);
+    expect(shiftConflicts(allDay, off, [])).toEqual([
+      { kind: 'time-off', label: 'Personal day 12:00 PM – 5:00 PM', sick: false },
+    ]);
+    expect(shiftConflicts(shift('u', '2026-10-05'), off, [])).toHaveLength(1);
+    expect(timeOffText(off[0])).toBe('Personal day · 12:00 PM – 5:00 PM');
+  });
+
   it('reads typed times', () => {
     expect(parseTime('9')).toBe('09:00');
     expect(parseTime('930')).toBe('09:30');
     expect(parseTime('2:15 pm')).toBe('14:15');
+    expect(parseTime('Noon')).toBe('12:00');
     expect(parseTime('12am')).toBe('00:00');
     expect(parseTime('12 PM')).toBe('12:00');
     expect(parseTime('17:45')).toBe('17:45');

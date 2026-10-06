@@ -1,10 +1,17 @@
 import { useState } from 'react';
 
-import { type RangeState, RangePicker, TypePicker } from '@/components/time-off/parts';
+import {
+  type PartDayState,
+  PartDayPicker,
+  type RangeState,
+  RangePicker,
+  TypePicker,
+} from '@/components/time-off/parts';
 import { AppText, Button, Card, ErrorText, Field, Screen, SectionTitle } from '@/components/ui';
 import { type TimeOffType, useSubmitRequest } from '@/features/time-off';
 import { errorMessage, goBack } from '@/lib/confirm';
 import { today } from '@/lib/dates';
+import { type HoursErrors, readHours } from '@/lib/time-off';
 import { useAuth } from '@/providers/auth';
 
 export default function RequestScreen() {
@@ -13,6 +20,8 @@ export default function RequestScreen() {
   const [range, setRange] = useState<RangeState>({ start: null, end: null });
   const [type, setType] = useState<TimeOffType>('vacation');
   const [reason, setReason] = useState('');
+  const [partDay, setPartDay] = useState<PartDayState>({ part: false, from: '', until: '' });
+  const [hoursErrors, setHoursErrors] = useState<HoursErrors>({});
   const [error, setError] = useState<string | null>(null);
 
   if (!profile?.crew_id) {
@@ -26,15 +35,26 @@ export default function RequestScreen() {
   }
 
   const past = !!range.start && range.start < today();
+  const oneDay = !!range.start && (range.end ?? range.start) === range.start;
 
   async function onSubmit() {
     if (!range.start) return setError('Pick your days off.');
+    const hours = oneDay && partDay.part ? readHours(partDay.from, partDay.until) : null;
+    setHoursErrors(hours?.errors ?? {});
+    if (hours && !hours.values) return;
     setError(null);
     try {
       await submit.mutateAsync({
         requesterId: profile!.id,
         crewId: profile!.crew_id!,
-        values: { start_date: range.start, end_date: range.end ?? range.start, type, reason: reason.trim() || null },
+        values: {
+          start_date: range.start,
+          end_date: range.end ?? range.start,
+          start_time: hours?.values?.start_time ?? null,
+          end_time: hours?.values?.end_time ?? null,
+          type,
+          reason: reason.trim() || null,
+        },
       });
       goBack('/time-off');
     } catch (e) {
@@ -47,6 +67,7 @@ export default function RequestScreen() {
       <SectionTitle>Days</SectionTitle>
       <Card>
         <RangePicker value={range} onChange={setRange} />
+        {oneDay ? <PartDayPicker value={partDay} onChange={setPartDay} errors={hoursErrors} /> : null}
       </Card>
       {past ? (
         <AppText variant="caption" muted>

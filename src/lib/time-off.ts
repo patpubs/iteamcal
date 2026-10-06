@@ -1,4 +1,6 @@
 import { addDays, daysBetween, shortDay } from './dates';
+import { endBeforeStartMessage, parseTime } from './schedule';
+import { formatTimeRange } from './time-format';
 
 // Pure rules for time-off ranges, the range picker, and coverage warnings.
 
@@ -17,10 +19,42 @@ export function rangeDays(r: Range) {
   return Array.from({ length: dayCount(r) }, (_, i) => addDays(r.start_date, i));
 }
 
-/** "Oct 5", or "Oct 5 – Oct 7 · 3 days". */
-export function rangeText(r: Range) {
-  if (r.start_date === r.end_date) return shortDay(r.start_date);
+/** Hours for part of a day off; both null for whole days. */
+export type Hours = { start_time?: string | null; end_time?: string | null };
+
+/** "Oct 5", "Oct 5 · 12:00 PM – 5:00 PM", or "Oct 5 – Oct 7 · 3 days". */
+export function rangeText(r: Range & Hours) {
+  if (r.start_date === r.end_date) {
+    return r.start_time && r.end_time
+      ? `${shortDay(r.start_date)} · ${formatTimeRange(r.start_time, r.end_time)}`
+      : shortDay(r.start_date);
+  }
   return `${shortDay(r.start_date)} – ${shortDay(r.end_date)} · ${dayCount(r)} days`;
+}
+
+export type HoursErrors = { from?: string; until?: string };
+
+/**
+ * Reads typed from/until times for part of a day off, with the database's
+ * rule that until is after from.
+ */
+export function readHours(
+  from: string,
+  until: string,
+): {
+  values: { start_time: string; end_time: string } | null;
+  errors: HoursErrors;
+} {
+  const errors: HoursErrors = {};
+  const start = parseTime(from);
+  const end = parseTime(until);
+  if (start === null) errors.from = 'Enter when time off starts.';
+  else if (start === undefined) errors.from = 'Use a time like 12:00 PM.';
+  if (end === null) errors.until = 'Enter when time off ends.';
+  else if (end === undefined) errors.until = 'Use a time like 5:00 PM.';
+  if (start && end && end <= start) errors.until = endBeforeStartMessage(start, end);
+  if (errors.from || errors.until || !start || !end) return { values: null, errors };
+  return { values: { start_time: start, end_time: end }, errors };
 }
 
 /**
