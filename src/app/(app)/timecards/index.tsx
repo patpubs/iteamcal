@@ -123,8 +123,8 @@ function MyWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: (w
 }
 
 /**
- * Admin view of everyone's week (PRD §10): approved accounts, including
- * people with no entries, minus crew set to not need timecards, plus old-app
+ * Admin view of everyone's week (PRD §10): approved accounts linked to crew,
+ * including people with no entries, minus crew set to not need timecards, plus old-app
  * cards for crew who never signed in. Sorted by name rather than schedule order.
  */
 function CrewWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: (week: string) => void }) {
@@ -137,8 +137,13 @@ function CrewWeek({ days, now, onWeek }: { days: string[]; now: string; onWeek: 
   const people = useMemo(() => {
     if (!profiles.data || !crew.data || !cards.data || !oldCards.data) return null;
     const crewById = new Map(crew.data.map((c) => [c.id, c]));
+    const hasCards = new Set(cards.data.map((c) => c.user_id));
+    // Crew members only: an account with no crew link (a spare login, a
+    // mistyped sign-up) shows up only if it actually has a card that week.
     const withAccount = profiles.data
-      .filter((p) => p.approval === 'approved' && !(p.crew_id && crewById.get(p.crew_id)?.hide_timecards))
+      .filter(
+        (p) => p.approval === 'approved' && (p.crew_id ? !crewById.get(p.crew_id)?.hide_timecards : hasCards.has(p.id)),
+      )
       .map((p) => ({
         key: p.id,
         userId: p.id as string | undefined,
